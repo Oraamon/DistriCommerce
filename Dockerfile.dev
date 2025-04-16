@@ -1,0 +1,17 @@
+FROM gradle:8.5-jdk17
+
+WORKDIR /app
+
+# Copiar apenas os arquivos necessários primeiro
+COPY build.gradle settings.gradle ./
+COPY src ./src
+
+# Configurar o Gradle Wrapper manualmente
+RUN gradle wrapper --gradle-version 8.5
+RUN chmod +x ./gradlew
+
+# Expor a porta
+EXPOSE 8080
+
+# Iniciar o servidor em modo de desenvolvimento
+CMD ["./gradlew", "bootRun", "--no-daemon"] 

@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node.js
+frontend/node_modules/
+frontend/build/
+frontend/npm-debug.log
+frontend/yarn-error.log
+
+# Docker
+.dockerignore
+**/Dockerfile
+**/docker-compose.yml
+
+# Outros
+.DS_Store
+**/*.log
+**/.idea
+**/*.iml
+**/*.iws
+**/*.ipr
+**/out/
+**/target/ 
