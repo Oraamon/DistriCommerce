@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import AuthService from '../services/AuthService';
 
 const Home = () => {
   const [products, setProducts] = useState([]);

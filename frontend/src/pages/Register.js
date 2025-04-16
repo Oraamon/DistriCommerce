@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Card, Alert, Container, Row, Col } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import AuthService from '../services/AuthService';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +14,9 @@ const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const from = location.state?.from || '/';
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,18 +34,15 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/register', {
-        name: formData.name,
-        username: formData.username,
-        email: formData.email,
-        password: formData.password
-      });
-
-      // Armazenar informações do usuário no localStorage
-      localStorage.setItem('user', JSON.stringify(response.data));
+      await AuthService.register(
+        formData.name,
+        formData.username,
+        formData.email,
+        formData.password
+      );
       
-      // Redirecionar para a página inicial
-      navigate('/');
+      // Redirecionar para a página original ou home
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Erro ao registrar. Tente novamente.');
     } finally {

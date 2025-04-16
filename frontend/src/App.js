@@ -8,6 +8,7 @@ import ProductForm from './pages/ProductForm';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import PrivateRoute from './components/PrivateRoute';
 import { Container } from 'react-bootstrap';
 
 function App() {
@@ -18,11 +19,34 @@ function App() {
         <Container className="flex-grow-1 py-4">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/products/:id" element={<ProductDetails />} />
-            <Route path="/products/add" element={<ProductForm />} />
-            <Route path="/products/edit/:id" element={<ProductForm />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            <Route 
+              path="/products/:id" 
+              element={
+                <PrivateRoute>
+                  <ProductDetails />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/products/add" 
+              element={
+                <PrivateRoute>
+                  <ProductForm />
+                </PrivateRoute>
+              } 
+            />
+            <Route 
+              path="/products/edit/:id" 
+              element={
+                <PrivateRoute>
+                  <ProductForm />
+                </PrivateRoute>
+              } 
+            />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Container>

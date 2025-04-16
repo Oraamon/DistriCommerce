@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Card, Alert, Container, Row, Col } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import AuthService from '../services/AuthService';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -9,6 +9,9 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  const from = location.state?.from || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,16 +19,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', {
-        username,
-        password
-      });
-
-      // Armazenar informações do usuário no localStorage
-      localStorage.setItem('user', JSON.stringify(response.data));
+      await AuthService.login(username, password);
       
-      // Redirecionar para a página inicial
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Falha no login. Verifique suas credenciais.');
     } finally {
@@ -41,6 +37,11 @@ const Login = () => {
             <Card.Header as="h4" className="text-center">Login</Card.Header>
             <Card.Body>
               {error && <Alert variant="danger">{error}</Alert>}
+              {from !== '/' && (
+                <Alert variant="info">
+                  Você precisa fazer login para acessar esta página.
+                </Alert>
+              )}
               <Form onSubmit={handleSubmit}>
                 <Form.Group className="mb-3" controlId="username">
                   <Form.Label>Nome de usuário</Form.Label>
