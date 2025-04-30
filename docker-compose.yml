@@ -48,8 +48,11 @@ services:
     image: mongo:5.0
     ports:
       - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=ecommerce
     volumes:
       - mongodb-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
     networks:
       - ecommerce-network
 
@@ -128,15 +131,17 @@ services:
       - ecommerce-network
 
   recommendation-service:
-    build: ./recommendation-service
+    build: ./recommendation_service
     ports:
       - "50051:50051"
       - "5001:5001"
+    environment:
+      - EUREKA_SERVER=http://eureka-server:8761/eureka
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB=ecommerce
     depends_on:
       - eureka-server
-    environment:
-      EUREKA_SERVER: http://eureka-server:8761/eureka/
-      SERVICE_IP: recommendation-service
+      - mongodb
     networks:
       - ecommerce-network
 
