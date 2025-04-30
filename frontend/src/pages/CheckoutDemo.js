@@ -1,0 +1,437 @@
+import React, { useState, useEffect } from 'react';
+import { Alert, Badge, Button, Card, Col, Container, Form, ListGroup, Row, Spinner } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
+import CartService from '../services/CartService';
+
+const CheckoutDemo = () => {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [processingOrder, setProcessingOrder] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(null);
+  const navigate = useNavigate();
+  
+  // Dados do formulário
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    paymentMethod: 'credit_card',
+    cardNumber: '',
+    cardName: '',
+    cardExpiry: '',
+    cardCvv: ''
+  });
+  
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        // Verificar se estamos em modo de demonstração
+        const isDemoMode = CartService.isDemoMode();
+        if (!isDemoMode) {
+          navigate('/checkout');
+          return;
+        }
+        
+        // Buscar itens do carrinho
+        const items = await CartService.getCartItems();
+        if (!items || items.length === 0) {
+          navigate('/cart');
+          return;
+        }
+        
+        setCartItems(items);
+        setLoading(false);
+      } catch (err) {
+        console.error('Erro ao carregar carrinho para checkout:', err);
+        setError('Erro ao carregar os itens do carrinho. Por favor, tente novamente.');
+        setLoading(false);
+      }
+    };
+    
+    fetchCartItems();
+  }, [navigate]);
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  const calculateSubtotal = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+  
+  const calculateShipping = () => {
+    return 15.00; // Valor fixo para exemplo
+  };
+  
+  const calculateTotal = () => {
+    return (calculateSubtotal() + calculateShipping()).toFixed(2);
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setProcessingOrder(true);
+    
+    try {
+      // Simular processamento de pedido
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Gerar número de pedido aleatório
+      const randomOrderNumber = Math.floor(100000 + Math.random() * 900000);
+      setOrderNumber(randomOrderNumber);
+      
+      // Limpar o carrinho
+      await CartService.clearCart();
+      
+      // Atualizar o header com a nova contagem do carrinho
+      const event = new CustomEvent('cart-updated');
+      window.dispatchEvent(event);
+      
+      // Mostrar sucesso
+      setOrderSuccess(true);
+    } catch (err) {
+      console.error('Erro ao processar pedido demo:', err);
+      setError('Erro ao processar o pedido. Por favor, tente novamente.');
+    } finally {
+      setProcessingOrder(false);
+    }
+  };
+  
+  if (loading) {
+    return (
+      <Container className="text-center my-5">
+        <Spinner animation="border" />
+        <p className="mt-3">Carregando informações do checkout...</p>
+      </Container>
+    );
+  }
+  
+  if (orderSuccess) {
+    return (
+      <Container className="py-5">
+        <Card className="text-center p-5 shadow-sm">
+          <Alert variant="success" className="mb-4">
+            <h1>Pedido Realizado com Sucesso!</h1>
+            <p className="lead">Obrigado pela sua compra no modo de demonstração</p>
+            <Badge bg="warning" text="dark">DEMONSTRAÇÃO</Badge>
+          </Alert>
+          
+          <div className="text-start my-4">
+            <h4>Resumo do Pedido #{orderNumber}</h4>
+            <p><strong>Data:</strong> {new Date().toLocaleString('pt-BR')}</p>
+            <p><strong>Total:</strong> R$ {calculateTotal()}</p>
+            <p>
+              <strong>Status:</strong>{' '}
+              <span className="badge bg-info">Processando (Demo)</span>
+            </p>
+            
+            <h5 className="mt-4">Informações de Entrega</h5>
+            <p>
+              {formData.address}<br />
+              {formData.city} - {formData.state}<br />
+              CEP: {formData.zipCode}
+            </p>
+            
+            <h5 className="mt-4">Método de Pagamento</h5>
+            <p>
+              {formData.paymentMethod === 'credit_card' 
+                ? 'Cartão de Crédito (Simulado)' 
+                : 'Boleto Bancário (Simulado)'}
+            </p>
+          </div>
+          
+          <div className="mt-4">
+            <Link to="/" className="btn btn-primary">
+              Continuar Comprando
+            </Link>
+          </div>
+        </Card>
+      </Container>
+    );
+  }
+  
+  return (
+    <Container className="py-4">
+      <h2 className="mb-3">
+        Finalizar Compra 
+        <Badge bg="warning" text="dark" className="ms-2">Modo de Demonstração</Badge>
+      </h2>
+      
+      <Alert variant="info">
+        <Alert.Heading>Modo de Demonstração</Alert.Heading>
+        <p>
+          Este é um checkout simulado. Nenhum pagamento real será processado e nenhum pedido real será criado.
+          Os dados inseridos não serão armazenados no servidor.
+        </p>
+      </Alert>
+      
+      {error && <Alert variant="danger">{error}</Alert>}
+      
+      <Form onSubmit={handleSubmit}>
+        <Row>
+          <Col lg={8}>
+            <Card className="mb-4">
+              <Card.Header>
+                <h5 className="mb-0">Informações de Entrega</h5>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Nome Completo</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email</Form.Label>
+                      <Form.Control
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                
+                <Form.Group className="mb-3">
+                  <Form.Label>Endereço</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Form.Group>
+                
+                <Row>
+                  <Col md={5}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Cidade</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Estado</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={3}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>CEP</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="zipCode"
+                        value={formData.zipCode}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+            
+            <Card className="mb-4">
+              <Card.Header>
+                <h5 className="mb-0">Método de Pagamento</h5>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Check
+                    type="radio"
+                    id="credit-card"
+                    label="Cartão de Crédito"
+                    name="paymentMethod"
+                    value="credit_card"
+                    checked={formData.paymentMethod === 'credit_card'}
+                    onChange={handleInputChange}
+                  />
+                  <Form.Check
+                    type="radio"
+                    id="boleto"
+                    label="Boleto Bancário"
+                    name="paymentMethod"
+                    value="boleto"
+                    checked={formData.paymentMethod === 'boleto'}
+                    onChange={handleInputChange}
+                  />
+                </Form.Group>
+                
+                {formData.paymentMethod === 'credit_card' && (
+                  <div className="mt-3">
+                    <Row>
+                      <Col md={12}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Número do Cartão</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="cardNumber"
+                            value={formData.cardNumber}
+                            onChange={handleInputChange}
+                            placeholder="0000 0000 0000 0000"
+                            required={formData.paymentMethod === 'credit_card'}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Nome no Cartão</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="cardName"
+                            value={formData.cardName}
+                            onChange={handleInputChange}
+                            required={formData.paymentMethod === 'credit_card'}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Validade</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="cardExpiry"
+                            value={formData.cardExpiry}
+                            onChange={handleInputChange}
+                            placeholder="MM/AA"
+                            required={formData.paymentMethod === 'credit_card'}
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>CVV</Form.Label>
+                          <Form.Control
+                            type="text"
+                            name="cardCvv"
+                            value={formData.cardCvv}
+                            onChange={handleInputChange}
+                            placeholder="123"
+                            required={formData.paymentMethod === 'credit_card'}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </div>
+                )}
+                
+                {formData.paymentMethod === 'boleto' && (
+                  <Alert variant="secondary" className="mt-3">
+                    <p className="mb-0">Após a confirmação do pedido, um boleto simulado será gerado.</p>
+                  </Alert>
+                )}
+              </Card.Body>
+            </Card>
+          </Col>
+          
+          <Col lg={4}>
+            <Card className="mb-4">
+              <Card.Header>
+                <h5 className="mb-0">Resumo do Pedido</h5>
+              </Card.Header>
+              <Card.Body>
+                <ListGroup variant="flush">
+                  {cartItems.map(item => (
+                    <ListGroup.Item key={item.id}>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div>
+                          <span>{item.name} </span>
+                          <span className="text-muted">× {item.quantity}</span>
+                        </div>
+                        <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    </ListGroup.Item>
+                  ))}
+                  
+                  <ListGroup.Item>
+                    <div className="d-flex justify-content-between">
+                      <span>Subtotal</span>
+                      <span>R$ {calculateSubtotal().toFixed(2)}</span>
+                    </div>
+                  </ListGroup.Item>
+                  
+                  <ListGroup.Item>
+                    <div className="d-flex justify-content-between">
+                      <span>Frete</span>
+                      <span>R$ {calculateShipping().toFixed(2)}</span>
+                    </div>
+                  </ListGroup.Item>
+                  
+                  <ListGroup.Item>
+                    <div className="d-flex justify-content-between fw-bold">
+                      <span>Total</span>
+                      <span>R$ {calculateTotal()}</span>
+                    </div>
+                  </ListGroup.Item>
+                </ListGroup>
+                
+                <Button 
+                  type="submit" 
+                  variant="primary" 
+                  size="lg" 
+                  className="w-100 mt-3"
+                  disabled={processingOrder}
+                >
+                  {processingOrder ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />{' '}
+                      Processando...
+                    </>
+                  ) : (
+                    'Finalizar Compra'
+                  )}
+                </Button>
+                <p className="text-center mt-2">
+                  <small className="text-muted">
+                    Este é um pagamento simulado no modo de demonstração.
+                  </small>
+                </p>
+              </Card.Body>
+            </Card>
+            
+            <div className="text-center">
+              <Link to="/cart" className="btn btn-outline-secondary">
+                Voltar ao Carrinho
+              </Link>
+            </div>
+          </Col>
+        </Row>
+      </Form>
+    </Container>
+  );
+};
+
+export default CheckoutDemo; 

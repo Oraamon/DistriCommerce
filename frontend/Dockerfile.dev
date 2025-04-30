@@ -5,6 +5,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Copiar todo o código-fonte do projeto
+COPY . .
+
 ENV NODE_ENV=development
 ENV REACT_APP_BACKEND_URL=http://backend:8080
 

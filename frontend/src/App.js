@@ -8,6 +8,13 @@ import ProductForm from './pages/ProductForm';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import CheckoutDemo from './pages/CheckoutDemo';
+import OrderSuccess from './pages/OrderSuccess';
+import OrderList from './pages/OrderList';
+import OrderDetails from './pages/OrderDetails';
+import UserProfile from './pages/UserProfile';
 import PrivateRoute from './components/PrivateRoute';
 import { Container } from 'react-bootstrap';
 
@@ -21,6 +28,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/checkout-demo" element={<CheckoutDemo />} />
 
             <Route 
               path="/products/:id" 
@@ -43,6 +51,60 @@ function App() {
               element={
                 <PrivateRoute>
                   <ProductForm />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/cart" 
+              element={
+                <PrivateRoute>
+                  <Cart />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/checkout" 
+              element={
+                <PrivateRoute>
+                  <Checkout />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/orders" 
+              element={
+                <PrivateRoute>
+                  <OrderList />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/orders/:orderId" 
+              element={
+                <PrivateRoute>
+                  <OrderDetails />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/orders/:orderId/success" 
+              element={
+                <PrivateRoute>
+                  <OrderSuccess />
+                </PrivateRoute>
+              } 
+            />
+            
+            <Route 
+              path="/profile" 
+              element={
+                <PrivateRoute>
+                  <UserProfile />
                 </PrivateRoute>
               } 
             />

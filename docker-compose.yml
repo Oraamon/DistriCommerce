@@ -1,44 +1,133 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: ecommerce-backend
-    ports:
-      - "${BACKEND_PORT:-8080}:8080"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-sa}
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
-    networks:
-      - ecommerce-network
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    volumes:
-      - ./src:/app/src
-
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: ecommerce-frontend
+    build: ./frontend
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "80:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - gateway-service
     networks:
       - ecommerce-network
-    restart: on-failure
+
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - ecommerce-network
+
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - ecommerce-network
+
+  mongodb:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - ecommerce-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - ecommerce-network
+
+  gateway-service:
+    build: ./gateway-service
+    ports:
+      - "8090:8080"
+    depends_on:
+      - eureka-server
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    networks:
+      - ecommerce-network
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - eureka-server
+      - mongodb
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATA_MONGODB_HOST: mongodb
+    networks:
+      - ecommerce-network
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - eureka-server
+      - postgres
+      - product-service
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce
+    networks:
+      - ecommerce-network
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - eureka-server
+      - postgres
+      - rabbitmq
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_payment
+      SPRING_RABBITMQ_HOST: rabbitmq
+    networks:
+      - ecommerce-network
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - eureka-server
+      - postgres
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_user
+    networks:
+      - ecommerce-network
+
+  recommendation-service:
+    build: ./recommendation-service
+    ports:
+      - "50051:50051"
+    depends_on:
+      - eureka-server
+    environment:
+      EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SERVICE_IP: recommendation-service
+    networks:
+      - ecommerce-network
+
+volumes:
+  postgres-data:
+  mongodb-data:
 
 networks:
   ecommerce-network:
