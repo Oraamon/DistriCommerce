@@ -6,10 +6,7 @@ spring:
     name: product-service
   data:
     mongodb:
-      host: localhost
-      port: 27017
-      database: ecommerce
-      authentication-database: admin
+      uri: ${MONGO_URI:mongodb://mongodb:27017/ecommerce}
 
 eureka:
   client:

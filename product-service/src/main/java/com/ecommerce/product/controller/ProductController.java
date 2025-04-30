@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -41,6 +42,18 @@ public class ProductController {
     @GetMapping("/category/{category}")
     public ResponseEntity<List<ProductResponse>> getProductsByCategory(@PathVariable String category) {
         return ResponseEntity.ok(productService.getProductsByCategory(category));
+    }
+    
+    @GetMapping("/price-range")
+    public ResponseEntity<List<ProductResponse>> getProductsByPriceRange(
+            @RequestParam BigDecimal minPrice, 
+            @RequestParam BigDecimal maxPrice) {
+        return ResponseEntity.ok(productService.getProductsByPriceRange(minPrice, maxPrice));
+    }
+    
+    @GetMapping("/{id}/related")
+    public ResponseEntity<List<ProductResponse>> getRelatedProducts(@PathVariable String id) {
+        return ResponseEntity.ok(productService.getRelatedProducts(id));
     }
 
     @PutMapping("/{id}")

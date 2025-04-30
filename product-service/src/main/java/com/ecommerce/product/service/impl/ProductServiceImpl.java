@@ -6,8 +6,12 @@ import com.ecommerce.product.model.Product;
 import com.ecommerce.product.repository.ProductRepository;
 import com.ecommerce.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,7 +47,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponse> getAllProducts() {
-        List<Product> products = productRepository.findAll();
+        List<Product> products = productRepository.findAll(Sort.by(Sort.Direction.DESC, "rating"));
         return products.stream()
                 .map(this::mapToProductResponse)
                 .collect(Collectors.toList());
@@ -61,6 +65,27 @@ public class ProductServiceImpl implements ProductService {
     public List<ProductResponse> getProductsByCategory(String category) {
         List<Product> products = productRepository.findByCategoriesContaining(category);
         return products.stream()
+                .map(this::mapToProductResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<ProductResponse> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
+        List<Product> products = productRepository.findByPriceRange(minPrice, maxPrice);
+        return products.stream()
+                .map(this::mapToProductResponse)
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public List<ProductResponse> getRelatedProducts(String productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+                
+        List<Product> relatedProducts = productRepository.findRelatedProducts(product.getCategories());
+        return relatedProducts.stream()
+                .filter(p -> !p.getId().equals(productId))
+                .limit(4)
                 .map(this::mapToProductResponse)
                 .collect(Collectors.toList());
     }

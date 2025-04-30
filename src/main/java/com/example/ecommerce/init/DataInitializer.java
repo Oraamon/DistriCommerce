@@ -62,7 +62,7 @@ public class DataInitializer implements CommandLineRunner {
             );
             
             productRepository.saveAll(demoProducts);
-            System.out.println(">>> Dados de exemplo foram adicionados ao banco de dados.");
+            System.out.println(">>> Dados de exemplo foram adicionados ao MongoDB.");
         }
     }
 } 

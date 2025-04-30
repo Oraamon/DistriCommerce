@@ -3,6 +3,7 @@ package com.ecommerce.product.service;
 import com.ecommerce.product.dto.ProductRequest;
 import com.ecommerce.product.dto.ProductResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface ProductService {
@@ -16,6 +17,10 @@ public interface ProductService {
     List<ProductResponse> searchProducts(String query);
     
     List<ProductResponse> getProductsByCategory(String category);
+    
+    List<ProductResponse> getProductsByPriceRange(BigDecimal minPrice, BigDecimal maxPrice);
+    
+    List<ProductResponse> getRelatedProducts(String productId);
     
     ProductResponse updateProduct(String id, ProductRequest productRequest);
     

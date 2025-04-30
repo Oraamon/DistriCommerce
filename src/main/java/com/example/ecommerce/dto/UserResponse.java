@@ -5,7 +5,7 @@ import com.example.ecommerce.model.Role;
 import java.util.Set;
 
 public class UserResponse {
-    private Long id;
+    private String id;
     private String name;
     private String username;
     private String email;
@@ -14,7 +14,7 @@ public class UserResponse {
     public UserResponse() {
     }
 
-    public UserResponse(Long id, String name, String username, String email, Set<Role> roles) {
+    public UserResponse(String id, String name, String username, String email, Set<Role> roles) {
         this.id = id;
         this.name = name;
         this.username = username;
@@ -22,11 +22,11 @@ public class UserResponse {
         this.roles = roles;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

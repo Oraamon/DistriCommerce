@@ -1,39 +1,28 @@
 package com.example.ecommerce.model;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.util.HashSet;
 import java.util.Set;
 
-@Entity
-@Table(name = "users")
+@Document(collection = "users")
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @NotBlank(message = "Nome é obrigatório")
     private String name;
 
-    @NotBlank(message = "Username é obrigatório")
-    @Column(unique = true)
+    @Indexed(unique = true)
     private String username;
 
-    @NotBlank(message = "Email é obrigatório")
-    @Email(message = "Email deve ser válido")
-    @Column(unique = true)
+    @Indexed(unique = true)
     private String email;
 
-    @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 6, message = "Senha deve ter pelo menos 6 caracteres")
     private String password;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @Enumerated(EnumType.STRING)
     private Set<Role> roles = new HashSet<>();
 
     public User() {
@@ -47,11 +36,11 @@ public class User {
         this.roles.add(Role.ROLE_USER);
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
