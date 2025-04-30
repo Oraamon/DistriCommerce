@@ -1,6 +1,11 @@
-FROM python:3.10-slim
+FROM python:3.9-slim
 
 WORKDIR /app
+
+# Instalar dependências de sistema
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
@@ -11,6 +16,6 @@ COPY . .
 # Generate proto files
 RUN chmod +x generate_protos.sh && ./generate_protos.sh
 
-EXPOSE 50051
+EXPOSE 50051 5000
 
 CMD ["python", "server.py"] 

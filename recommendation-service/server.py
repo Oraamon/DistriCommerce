@@ -7,6 +7,8 @@ from concurrent import futures
 from dotenv import load_dotenv
 import py_eureka_client.eureka_client as eureka_client
 from sklearn.metrics.pairwise import cosine_similarity
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 # Import the generated classes
 import recommendation_pb2
@@ -22,6 +24,7 @@ EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://localhost:8761/eureka/")
 SERVICE_PORT = os.getenv("SERVICE_PORT", "50051")
 SERVICE_NAME = "recommendation-service"
 SERVICE_IP = os.getenv("SERVICE_IP", "localhost")
+SERVICE_HOST = os.getenv("SERVICE_HOST", "localhost")
 
 # Sample data (in production would come from a database)
 # Format: product_id, product_name, category, price, feature1, feature2, feature3, ...
@@ -152,6 +155,82 @@ class RecommendationServicer(recommendation_pb2_grpc.RecommendationServiceServic
             context.set_details(str(e))
             return recommendation_pb2.ProductRecommendationResponse()
 
+# Flask app for REST endpoints
+app = Flask(__name__)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-User-ID"]
+    }
+})
+
+@app.route('/api/recommendations/products/<product_id>', methods=['GET'])
+def get_product_recommendations(product_id):
+    max_results = request.args.get('maxResults', default=4, type=int)
+    
+    try:
+        product_idx = products_df.index[products_df['id'] == product_id].tolist()[0]
+        product_similarities = cosine_similarity(products_df[["feature1", "feature2", "feature3"]].to_numpy())[product_idx]
+        similar_indices = np.argsort(product_similarities)[::-1][1:max_results+1]
+        
+        recommendations = []
+        for idx in similar_indices:
+            product = products_df.iloc[idx]
+            recommendations.append({
+                'id': product['id'],
+                'name': product['name'],
+                'price': float(product['price']),
+                'score': float(product_similarities[idx])
+            })
+        
+        return jsonify(recommendations)
+    except (IndexError, KeyError):
+        return jsonify({'error': f'Product ID {product_id} not found'}), 404
+
+@app.route('/api/recommendations/users', methods=['GET'])
+def get_user_recommendations():
+    user_id = request.headers.get('X-User-ID', 'user1')  # Default to user1 if not provided
+    max_results = request.args.get('maxResults', default=4, type=int)
+    
+    try:
+        user_product_ids = user_purchases[user_purchases['user_id'] == user_id]['product_id'].tolist()
+        
+        if not user_product_ids:
+            return jsonify({'error': f'No purchase history for user {user_id}'}), 404
+        
+        user_product_indices = []
+        for pid in user_product_ids:
+            indices = products_df.index[products_df['id'] == pid].tolist()
+            if indices:
+                user_product_indices.append(indices[0])
+        
+        user_profile = np.mean([products_df[["feature1", "feature2", "feature3"]].to_numpy()[idx] for idx in user_product_indices], axis=0)
+        user_similarities = cosine_similarity([user_profile], products_df[["feature1", "feature2", "feature3"]].to_numpy())[0]
+        
+        all_indices = np.argsort(user_similarities)[::-1]
+        recommended_indices = []
+        
+        for idx in all_indices:
+            product_id = products_df.iloc[idx]['id']
+            if product_id not in user_product_ids:
+                recommended_indices.append(idx)
+                if len(recommended_indices) >= max_results:
+                    break
+        
+        recommendations = []
+        for idx in recommended_indices:
+            product = products_df.iloc[idx]
+            recommendations.append({
+                'id': product['id'],
+                'name': product['name'],
+                'price': float(product['price']),
+                'score': float(user_similarities[idx])
+            })
+        
+        return jsonify(recommendations)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 def register_with_eureka():
     """Register the service with Eureka server"""
@@ -166,32 +245,27 @@ def register_with_eureka():
     except Exception as e:
         print(f"Failed to register with Eureka: {e}")
 
-
 def serve():
     """Start the gRPC server and register with Eureka"""
     # Create a gRPC server
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=MAX_WORKERS))
-    
-    # Add the recommendation servicer to the server
     recommendation_pb2_grpc.add_RecommendationServiceServicer_to_server(
         RecommendationServicer(), server)
-    
-    # Listen on port
     server.add_insecure_port(f'[::]:{SERVICE_PORT}')
     server.start()
-    
-    print(f"Server started, listening on port {SERVICE_PORT}")
+    print(f"gRPC Server started on port {SERVICE_PORT}")
     
     # Register with Eureka
     register_with_eureka()
+    
+    # Start Flask app
+    app.run(host='0.0.0.0', port=5001)
     
     try:
         while True:
             time.sleep(_ONE_DAY_IN_SECONDS)
     except KeyboardInterrupt:
         server.stop(0)
-        print("Server stopped")
-
 
 if __name__ == '__main__':
     serve() 

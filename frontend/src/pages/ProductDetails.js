@@ -4,6 +4,7 @@ import { Card, Button, Row, Col, Alert, Spinner, Modal, Form, Toast, ToastContai
 import axios from 'axios';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
+import RelatedProducts from '../components/RelatedProducts';
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -174,6 +175,8 @@ const ProductDetails = () => {
           </Col>
         </Row>
       </Card>
+
+      <RelatedProducts productId={id} />
 
       {/* Modal de confirmação de exclusão */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>

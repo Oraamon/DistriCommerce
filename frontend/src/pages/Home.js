@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Button, Alert, Spinner, Toast, ToastContainer } from 'react-bootstrap';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
@@ -13,6 +13,7 @@ const Home = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
+  const searchParams = useSearchParams()[0];
 
   useEffect(() => {
     // Verificar se o usuário está autenticado
