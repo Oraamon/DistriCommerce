@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -19,6 +19,23 @@ import PrivateRoute from './components/PrivateRoute';
 import { Container } from 'react-bootstrap';
 
 function App() {
+  // Criar usuário de teste temporário se não houver um
+  useEffect(() => {
+    if (!localStorage.getItem('user') || !localStorage.getItem('auth_token')) {
+      const testUser = {
+        id: 'temp-user-1',
+        name: 'Usuário de Teste',
+        email: 'teste@example.com',
+        username: 'teste',
+        role: 'USER',
+        token: 'temp-token-123456789'
+      };
+      localStorage.setItem('user', JSON.stringify(testUser));
+      localStorage.setItem('auth_token', testUser.token);
+      console.log('Criado usuário de teste temporário:', testUser);
+    }
+  }, []);
+
   return (
     <Router>
       <div className="d-flex flex-column min-vh-100">

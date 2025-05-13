@@ -13,7 +13,7 @@ const ProductForm = () => {
     description: '',
     price: '',
     imageUrl: '',
-    stockQuantity: ''
+    quantity: ''
   });
   
   const [loading, setLoading] = useState(isEditMode);
@@ -32,7 +32,7 @@ const ProductForm = () => {
             description: product.description || '',
             price: product.price.toString(),
             imageUrl: product.imageUrl || '',
-            stockQuantity: product.stockQuantity.toString()
+            quantity: product.quantity.toString()
           });
         } catch (err) {
           setError('Erro ao carregar dados do produto.');
@@ -72,7 +72,7 @@ const ProductForm = () => {
       const productData = {
         ...formData,
         price: parseFloat(formData.price),
-        stockQuantity: parseInt(formData.stockQuantity, 10)
+        quantity: parseInt(formData.quantity, 10)
       };
 
       if (isEditMode) {
@@ -173,11 +173,11 @@ const ProductForm = () => {
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="productStock">
-              <Form.Label>Quantidade em Estoque</Form.Label>
+              <Form.Label>Estoque</Form.Label>
               <Form.Control
                 type="number"
-                name="stockQuantity"
-                value={formData.stockQuantity}
+                name="quantity"
+                value={formData.quantity}
                 onChange={handleChange}
                 required
                 min="0"

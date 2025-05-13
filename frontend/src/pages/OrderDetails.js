@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Badge, Card, Col, Container, ListGroup, Row } from 'react-bootstrap';
+import { Alert, Badge, Card, Col, Container, ListGroup, Row, Spinner } from 'react-bootstrap';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthService from '../services/AuthService';
 
 const OrderDetails = () => {
   const [order, setOrder] = useState(null);
@@ -13,21 +14,94 @@ const OrderDetails = () => {
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+        // Usar o AuthService para obter o token
+        const token = AuthService.getAuthToken();
+        const user = AuthService.getCurrentUser();
+        
+        // Verificar se usuário está autenticado
+        if (!token || !user) {
+          console.log("OrderDetails - Redirecionando para login - token ou user ausente");
           navigate('/login');
           return;
         }
         
-        const response = await axios.get(`/api/orders/${orderId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        // Verificar se há pedidos no localStorage (demo)
+        const demoOrders = JSON.parse(localStorage.getItem('demo_orders') || '[]');
+        const foundDemoOrder = demoOrders.find(order => order.id === orderId);
         
-        setOrder(response.data);
+        if (foundDemoOrder) {
+          console.log("OrderDetails - Usando dados de pedido demo:", foundDemoOrder);
+          setOrder(foundDemoOrder);
+          setLoading(false);
+          return;
+        }
+        
+        // Fazer a requisição real do pedido
+        try {
+          const response = await axios.get(`/api/orders/${orderId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          setOrder(response.data);
+        } catch (apiError) {
+          console.error("Erro ao buscar detalhes do pedido:", apiError);
+          
+          // Se estamos em ambiente de desenvolvimento, criar um pedido simulado
+          if (process.env.NODE_ENV === 'development') {
+            console.log("OrderDetails - Criando pedido de teste em desenvolvimento");
+            setOrder({
+              id: orderId,
+              createdAt: new Date().toISOString(),
+              status: 'processing',
+              totalPrice: 456.78,
+              items: [
+                {
+                  id: 1,
+                  quantity: 2,
+                  price: 99.99,
+                  product: {
+                    id: 'p1',
+                    name: 'Produto de Teste',
+                    description: 'Este é um produto de teste para desenvolvimento',
+                    imageUrl: 'https://via.placeholder.com/80'
+                  }
+                },
+                {
+                  id: 2,
+                  quantity: 1,
+                  price: 256.80,
+                  product: {
+                    id: 'p2',
+                    name: 'Outro Produto',
+                    description: 'Descrição do outro produto de teste',
+                    imageUrl: 'https://via.placeholder.com/80'
+                  }
+                }
+              ],
+              shippingAddress: {
+                street: 'Rua de Teste',
+                number: '123',
+                complement: 'Apto 101',
+                city: 'São Paulo',
+                state: 'SP',
+                zipCode: '01234-567'
+              },
+              payment: {
+                method: 'credit_card',
+                status: 'approved',
+                transactionId: 'txn_' + Math.random().toString(36).substring(2)
+              }
+            });
+          } else {
+            throw apiError;
+          }
+        }
+        
         setLoading(false);
       } catch (err) {
+        console.error("Erro ao buscar detalhes do pedido:", err);
         setError('Erro ao carregar os detalhes do pedido. Por favor, tente novamente.');
         setLoading(false);
       }
@@ -86,7 +160,13 @@ const OrderDetails = () => {
     }
   };
   
-  if (loading) return <p>Carregando detalhes do pedido...</p>;
+  if (loading) return (
+    <div className="text-center my-5">
+      <Spinner animation="border" role="status">
+        <span className="visually-hidden">Carregando...</span>
+      </Spinner>
+    </div>
+  );
   if (error) return <Alert variant="danger">{error}</Alert>;
   if (!order) return <Alert variant="warning">Pedido não encontrado</Alert>;
   

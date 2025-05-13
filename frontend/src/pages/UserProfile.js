@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Badge, Button, Card, Col, Container, Form, Row, Tab, Tabs } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthService from '../services/AuthService';
 
 const UserProfile = () => {
   // Estado para armazenar os dados do usuário e outros dados relacionados
@@ -39,34 +40,38 @@ const UserProfile = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+        const token = AuthService.getAuthToken();
+        const userData = AuthService.getCurrentUser();
+        
+        if (!token || !userData) {
+          console.log("Redirecionando para login - token ou userData é null");
           navigate('/login');
           return;
         }
         
-        const userResponse = await axios.get('/api/users/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        setUser(userResponse.data);
+        setUser(userData);
         setProfileForm({
-          name: userResponse.data.name || '',
-          email: userResponse.data.email || '',
-          phone: userResponse.data.phone || ''
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || ''
         });
         
-        const addressesResponse = await axios.get('/api/users/addresses', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        // Tentar buscar endereços (se a API existir)
+        try {
+          const addressesResponse = await axios.get('/api/users/addresses', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          setAddresses(addressesResponse.data);
+        } catch (addressErr) {
+          console.log("Erro ao buscar endereços:", addressErr);
+          // Sem tratamento de erro aqui, apenas log
+        }
         
-        setAddresses(addressesResponse.data);
         setLoading(false);
       } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
         setError('Erro ao carregar dados do perfil. Por favor, tente novamente.');
         setLoading(false);
       }

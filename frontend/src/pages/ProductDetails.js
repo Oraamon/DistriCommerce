@@ -75,7 +75,7 @@ const ProductDetails = () => {
   
   const handleQuantityChange = (e) => {
     const value = parseInt(e.target.value);
-    if (value > 0 && value <= product.stockQuantity) {
+    if (value > 0 && value <= product.quantity) {
       setQuantity(value);
     }
   };
@@ -124,11 +124,11 @@ const ProductDetails = () => {
                 R$ {product.price.toFixed(2)}
               </Card.Text>
               <Card.Text className="fs-6 text-muted">
-                Disponível: {product.stockQuantity} unidades
+                Disponível: {product.quantity} unidades
               </Card.Text>
               <Card.Text>{product.description}</Card.Text>
               
-              {product.stockQuantity > 0 ? (
+              {product.quantity > 0 ? (
                 <div className="mt-4">
                   <Form.Group as={Row} className="mb-3 align-items-center">
                     <Form.Label column sm={3}>Quantidade:</Form.Label>
@@ -136,7 +136,7 @@ const ProductDetails = () => {
                       <Form.Control
                         type="number"
                         min="1"
-                        max={product.stockQuantity}
+                        max={product.quantity}
                         value={quantity}
                         onChange={handleQuantityChange}
                       />

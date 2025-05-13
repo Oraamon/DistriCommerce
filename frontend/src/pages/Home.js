@@ -12,13 +12,18 @@ const Home = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const searchParams = useSearchParams()[0];
 
   useEffect(() => {
-    // Verificar se o usuário está autenticado
+    // Verificar se o usuário está autenticado e é admin
+    const user = AuthService.getCurrentUser();
     setIsAuthenticated(AuthService.isAuthenticated());
+    setIsAdmin(user && user.role === 'ADMIN');
+    
     console.log('Autenticado:', AuthService.isAuthenticated());
+    console.log('É admin:', user && user.role === 'ADMIN');
     console.log('Token:', AuthService.getAuthToken());
     console.log('Modo de demonstração:', CartService.isDemoMode());
     
@@ -90,6 +95,22 @@ const Home = () => {
     }
   };
 
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
+      try {
+        await axios.delete(`/api/products/${productId}`);
+        // Atualizar a lista de produtos após a exclusão
+        setProducts(products.filter(p => p.id !== productId));
+        setToastMessage('Produto excluído com sucesso!');
+        setShowToast(true);
+      } catch (error) {
+        setToastMessage('Erro ao excluir produto. Tente novamente.');
+        setShowToast(true);
+        console.error('Erro ao excluir produto:', error);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center my-5">
@@ -135,6 +156,23 @@ const Home = () => {
                       <i className="bi bi-cart-plus"></i>
                     </Button>
                   </div>
+                  
+                  {isAdmin && (
+                    <div className="mt-2 d-flex gap-2">
+                      <Link to={`/products/edit/${product.id}`} className="flex-grow-1">
+                        <Button variant="warning" className="w-100" size="sm">
+                          <i className="bi bi-pencil"></i> Editar
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="danger" 
+                        size="sm"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        <i className="bi bi-trash"></i>
+                      </Button>
+                    </div>
+                  )}
                 </Card.Body>
               </Card>
             </Col>

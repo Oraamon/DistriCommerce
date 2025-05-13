@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, Badge, Card, Container, Table } from 'react-bootstrap';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Alert, Badge, Card, Container, Table, Spinner, Button } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import AuthService from '../services/AuthService';
+import CartService from '../services/CartService';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
@@ -9,31 +11,81 @@ const OrderList = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        const response = await axios.get('/api/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        setOrders(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError('Erro ao carregar os pedidos. Por favor, tente novamente.');
-        setLoading(false);
+  const fetchOrders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      const isDemo = CartService.isDemoMode();
+      
+      if (!token || !user) {
+        console.log("OrderList - Redirecionando para login - token ou user ausente");
+        navigate('/login');
+        return;
       }
-    };
-    
-    fetchOrders();
+      
+      let ordersList = [];
+      
+      const demoOrders = JSON.parse(localStorage.getItem('demo_orders') || '[]');
+      
+      if (demoOrders.length > 0 || isDemo) {
+        console.log("OrderList - Usando dados de pedidos de demonstração");
+        ordersList = demoOrders;
+        
+        if (ordersList.length === 0) {
+          ordersList = [
+            {
+              id: 'order_' + (Date.now() - 86400000),
+              createdAt: new Date(Date.now() - 86400000).toISOString(),
+              totalPrice: 456.78,
+              status: 'processing'
+            },
+            {
+              id: 'order_' + (Date.now() - 604800000),
+              createdAt: new Date(Date.now() - 604800000).toISOString(),
+              totalPrice: 123.45,
+              status: 'delivered'
+            }
+          ];
+        }
+      } else {
+        try {
+          const response = await axios.get('/api/orders', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          ordersList = response.data;
+        } catch (apiError) {
+          console.error("Erro ao buscar pedidos da API:", apiError);
+          if (demoOrders.length > 0) {
+            ordersList = demoOrders;
+          } else {
+            throw apiError;
+          }
+        }
+      }
+      
+      ordersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      setOrders(ordersList);
+      setLoading(false);
+    } catch (err) {
+      console.error("Erro ao buscar pedidos:", err);
+      setError('Erro ao carregar os pedidos. Por favor, tente novamente.');
+      setLoading(false);
+    }
   }, [navigate]);
+  
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+  
+  const handleRefresh = () => {
+    setLoading(true);
+    setError(null);
+    fetchOrders();
+  };
   
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
@@ -74,11 +126,22 @@ const OrderList = () => {
     }
   };
   
-  if (loading) return <p>Carregando pedidos...</p>;
+  if (loading) return (
+    <div className="text-center my-5">
+      <Spinner animation="border" role="status">
+        <span className="visually-hidden">Carregando...</span>
+      </Spinner>
+    </div>
+  );
   
   return (
     <Container className="py-4">
-      <h2 className="mb-4">Meus Pedidos</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2>Meus Pedidos</h2>
+        <Button variant="outline-primary" onClick={handleRefresh}>
+          <i className="bi bi-arrow-clockwise"></i> Atualizar
+        </Button>
+      </div>
       
       {error && (
         <Alert variant="danger">{error}</Alert>

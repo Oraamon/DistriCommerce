@@ -8,20 +8,21 @@ class AuthService {
           // Exibe a estrutura da resposta para debug
           console.log('Login response:', response.data);
           
-          // Se o login for bem-sucedido, mas não retornar um token,
-          // podemos criar um token simulado usando o ID do usuário como uma medida temporária
+          // Guardar o objeto completo do usuário
           const userData = { ...response.data };
           
-          // Adiciona um token simulado se não existir (solução temporária)
-          if (!userData.token && !userData.accessToken) {
-            userData.token = `simulated_token_${userData.id}_${Date.now()}`;
+          // Garantir que temos um token
+          if (!userData.token && userData.accessToken) {
+            userData.token = userData.accessToken;
+          } else if (!userData.token && !userData.accessToken) {
+            userData.token = `simulated_token_${userData.id || 'user'}_${Date.now()}`;
             console.log('Criado token simulado:', userData.token);
           }
           
-          // Armazena o objeto de usuário completo
+          // Armazenar os dados completos do usuário
           localStorage.setItem('user', JSON.stringify(userData));
           
-          // Armazena o token explicitamente
+          // Armazenar o token explicitamente
           localStorage.setItem('auth_token', userData.token || userData.accessToken);
           
           return userData;
@@ -31,11 +32,8 @@ class AuthService {
   }
 
   logout() {
-    // Limpa os dados de autenticação
     localStorage.removeItem('user');
     localStorage.removeItem('auth_token');
-    
-    // Redireciona para a página de login
     window.location.href = '/login';
   }
 
@@ -49,9 +47,16 @@ class AuthService {
   }
 
   getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    if (userStr) return JSON.parse(userStr);
-    return null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        return JSON.parse(userStr);
+      }
+      return null;
+    } catch (error) {
+      this.logout();
+      return null;
+    }
   }
 
   getAuthToken() {
@@ -59,7 +64,12 @@ class AuthService {
   }
 
   isAuthenticated() {
-    return this.getAuthToken() !== null;
+    // Verifica tanto o token quanto o objeto de usuário
+    const token = this.getAuthToken();
+    const user = this.getCurrentUser();
+    console.log("Token:", token);
+    console.log("User:", user);
+    return token !== null && user !== null;
   }
 }
 

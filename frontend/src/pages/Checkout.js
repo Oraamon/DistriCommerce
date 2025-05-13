@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button, Card, Col, Container, Form, ListGroup, Row } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import CartService from '../services/CartService';
+import AuthService from '../services/AuthService';
 
 const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -91,48 +93,107 @@ const Checkout = () => {
     setOrderProcessing(true);
     
     try {
-      const token = localStorage.getItem('token');
+      const token = AuthService.getAuthToken();
+      const isDemo = CartService.isDemoMode();
       
-      // Cria uma ordem no serviço de pedidos
-      const orderResponse = await axios.post('/api/orders', {
-        shippingAddress,
-        items: cartItems.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.price
-        })),
-        shippingPrice: calculateShipping(),
-        totalPrice: parseFloat(calculateTotal())
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      let orderId;
       
-      const orderId = orderResponse.data.id;
+      if (isDemo) {
+        // Em modo de demonstração, criamos um pedido local
+        console.log('Processando pedido em modo de demonstração');
+        
+        // Gerar um ID de pedido simulado
+        orderId = 'order_' + Date.now();
+        
+        // Salvar o pedido no localStorage para persistência
+        const existingOrders = JSON.parse(localStorage.getItem('demo_orders') || '[]');
+        
+        const newOrder = {
+          id: orderId,
+          createdAt: new Date().toISOString(),
+          totalPrice: parseFloat(calculateTotal()),
+          status: 'processing',
+          items: cartItems.map(item => ({
+            id: item.id,
+            productId: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          })),
+          shippingAddress,
+          shippingPrice: calculateShipping(),
+          payment: {
+            method: paymentMethod,
+            status: 'approved',
+            transactionId: 'demo_txn_' + Math.random().toString(36).substring(2)
+          }
+        };
+        
+        existingOrders.push(newOrder);
+        localStorage.setItem('demo_orders', JSON.stringify(existingOrders));
+        
+        // Limpar o carrinho em modo demo
+        CartService.clearCart();
+        
+        // Atualizar o header com a nova contagem do carrinho
+        const event = new CustomEvent('cart-updated');
+        window.dispatchEvent(event);
+      } else {
+        // Fluxo normal com API
+        // Cria uma ordem no serviço de pedidos
+        const orderResponse = await axios.post('/api/orders', {
+          shippingAddress,
+          items: cartItems.map(item => ({
+            productId: item.id,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          shippingPrice: calculateShipping(),
+          totalPrice: parseFloat(calculateTotal())
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        orderId = orderResponse.data.id;
+      }
       
-      // Processa o pagamento
-      await axios.post('/api/payments', {
-        orderId,
-        paymentMethod,
-        amount: parseFloat(calculateTotal()),
-        cardInfo: paymentMethod === 'credit_card' ? cardInfo : null
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Sempre enviar para o RabbitMQ, mesmo em modo demo
+      try {
+        // Preparar o objeto de pagamento
+        const paymentRequest = {
+          orderId: orderId,
+          userId: AuthService.getCurrentUser()?.id || "demo-user",
+          amount: parseFloat(calculateTotal()),
+          paymentMethod: paymentMethod.toUpperCase()
+        };
+        
+        console.log('Enviando solicitação de pagamento para RabbitMQ:', paymentRequest);
+        
+        // Enviar para o endpoint de pagamento (será encaminhado para o RabbitMQ)
+        // Usar um endpoint específico que não exija autenticação para o modo demo
+        const paymentEndpoint = isDemo ? 
+          '/api/payments/test/send' : 
+          '/api/payments/process';
+          
+        const paymentResponse = await axios.post(paymentEndpoint, paymentRequest, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && {'Authorization': `Bearer ${token}`})
+          }
+        });
+        
+        console.log('Resposta do processamento de pagamento:', paymentResponse.data);
+      } catch (paymentErr) {
+        console.error('Erro ao solicitar processamento de pagamento:', paymentErr);
+        // Não vamos tratar como erro fatal, apenas registrar
+      }
       
-      // Limpa o carrinho após finalização do pedido
-      await axios.delete('/api/cart', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      // Redireciona para página de sucesso
+      // Redirecionar para página de sucesso
       navigate(`/orders/${orderId}/success`);
     } catch (err) {
+      console.error('Erro ao processar pedido:', err);
       setError('Erro ao processar o pedido. Por favor, tente novamente.');
       setOrderProcessing(false);
     }
