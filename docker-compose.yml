@@ -1,6 +1,33 @@
 version: '3.8'
 
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ecommerce-backend
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-sa}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD:-password}
+      - SPRING_DEVTOOLS_RESTART_ENABLED=true
+      - SPRING_DEVTOOLS_LIVERELOAD_ENABLED=true
+    networks:
+      - ecommerce-network
+    volumes:
+      - ./src:/app/src
+      - ./build.gradle:/app/build.gradle
+      - ./settings.gradle:/app/settings.gradle
+      - gradle-cache:/root/.gradle
+    healthcheck:
+      test: ["CMD", "ls", "/app/gradlew"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   frontend:
     build:
       context: ./frontend
@@ -171,6 +198,8 @@ volumes:
   mongodb-data:
   prometheus-data:
   grafana-data:
+  gradle-cache:
+  node_modules:
 
 networks:
   ecommerce-network:
