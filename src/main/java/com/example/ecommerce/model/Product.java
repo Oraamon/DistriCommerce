@@ -19,17 +19,17 @@ public class Product {
 
     private String imageUrl;
 
-    private int stockQuantity;
+    private int quantity;
     
     public Product() {
     }
 
-    public Product(String name, String description, BigDecimal price, String imageUrl, int stockQuantity) {
+    public Product(String name, String description, BigDecimal price, String imageUrl, int quantity) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.imageUrl = imageUrl;
-        this.stockQuantity = stockQuantity;
+        this.quantity = quantity;
     }
 
     public String getId() {
@@ -72,11 +72,11 @@ public class Product {
         this.imageUrl = imageUrl;
     }
 
-    public int getStockQuantity() {
-        return stockQuantity;
+    public int getQuantity() {
+        return quantity;
     }
 
-    public void setStockQuantity(int stockQuantity) {
-        this.stockQuantity = stockQuantity;
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
     }
 } 
