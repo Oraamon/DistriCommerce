@@ -171,18 +171,26 @@ const Checkout = () => {
         
         console.log('Enviando solicitação de pagamento para RabbitMQ:', paymentRequest);
         
-        // Enviar para o endpoint de pagamento (será encaminhado para o RabbitMQ)
-        // Usar um endpoint específico que não exija autenticação para o modo demo
-        const paymentEndpoint = isDemo ? 
-          '/api/payments/test/send' : 
-          '/api/payments/process';
-          
+        // Usar o mesmo endpoint para modo demo e modo normal
+        const paymentEndpoint = '/api/payments/process';
+        
         const paymentResponse = await axios.post(paymentEndpoint, paymentRequest, {
           headers: {
             'Content-Type': 'application/json',
             ...(token && {'Authorization': `Bearer ${token}`})
           }
         });
+        
+        // Em modo demo, também atualizar estoque diretamente (fallback)
+        if (isDemo) {
+          try {
+            for (const item of cartItems) {
+              await axios.put(`/api/products/${item.id}/stock?quantity=-${item.quantity}`);
+            }
+          } catch (stockErr) {
+            console.error('Erro ao atualizar estoque em modo demo:', stockErr);
+          }
+        }
         
         console.log('Resposta do processamento de pagamento:', paymentResponse.data);
       } catch (paymentErr) {

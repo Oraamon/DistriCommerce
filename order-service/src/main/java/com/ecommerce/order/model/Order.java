@@ -1,5 +1,6 @@
 package com.ecommerce.order.model;
 
+import com.ecommerce.payment.model.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,4 +43,7 @@ public class Order {
     
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
 } 

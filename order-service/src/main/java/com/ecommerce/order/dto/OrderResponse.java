@@ -2,6 +2,7 @@ package com.ecommerce.order.dto;
 
 import com.ecommerce.order.model.OrderStatus;
 import com.ecommerce.order.model.PaymentStatus;
+import com.ecommerce.payment.model.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +26,5 @@ public class OrderResponse {
     private String shippingAddress;
     private String trackingNumber;
     private PaymentStatus paymentStatus;
+    private PaymentMethod paymentMethod;
 } 

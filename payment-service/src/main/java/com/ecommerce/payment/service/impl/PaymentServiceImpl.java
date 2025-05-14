@@ -17,8 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.ecommerce.payment.config.RabbitMQConfig.PAYMENT_RESULT_EXCHANGE;
-import static com.ecommerce.payment.config.RabbitMQConfig.PAYMENT_RESULT_ROUTING_KEY;
+import static com.ecommerce.payment.config.RabbitMQConfig.*;
 
 @Service
 @RequiredArgsConstructor
@@ -60,7 +59,12 @@ public class PaymentServiceImpl implements PaymentService {
         Payment updatedPayment = paymentRepository.save(savedPayment);
         
         PaymentResponse paymentResponse = mapToPaymentResponse(updatedPayment);
+        
+        // Envia para a fila de resultado (consumida pelo serviço de pedidos)
         rabbitTemplate.convertAndSend(PAYMENT_RESULT_EXCHANGE, PAYMENT_RESULT_ROUTING_KEY, paymentResponse);
+        
+        // Envia para a fila de log (consumida pelo próprio serviço de pagamento)
+        rabbitTemplate.convertAndSend(PAYMENT_LOG_EXCHANGE, PAYMENT_LOG_ROUTING_KEY, paymentResponse);
         
         return paymentResponse;
     }

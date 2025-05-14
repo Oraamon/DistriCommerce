@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Badge, Button, Card, Col, Container, Form, ListGroup, Row, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import CartService from '../services/CartService';
+import axios from 'axios';
 
 const CheckoutDemo = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -10,6 +11,7 @@ const CheckoutDemo = () => {
   const [processingOrder, setProcessingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null);
   const navigate = useNavigate();
   
   // Dados do formulário
@@ -76,31 +78,145 @@ const CheckoutDemo = () => {
     return (calculateSubtotal() + calculateShipping()).toFixed(2);
   };
   
+  // Função para conectar ao websocket para receber atualizações de pagamento do RabbitMQ
+  const listenForPaymentUpdates = (orderId) => {
+    // URL do WebSocket para escutar atualizações de pagamento
+    const wsUrl = `ws://${window.location.hostname}:${window.location.port}/api/ws/payments/${orderId}`;
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('Conexão estabelecida com o servidor de pagamentos');
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.status === 'APPROVED') {
+        setPaymentStatus('APPROVED');
+        ws.close();
+      } else if (data.status === 'REJECTED') {
+        setPaymentStatus('REJECTED');
+        setError('Pagamento rejeitado. Por favor, tente novamente com outro método de pagamento.');
+        ws.close();
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('Erro na conexão WebSocket:', error);
+      // Fallback: verificar status por polling se WebSocket falhar
+      startPaymentStatusPolling(orderId);
+    };
+    
+    return ws;
+  };
+  
+  // Função para verificar status de pagamento usando API de produção
+  const startPaymentStatusPolling = (orderId) => {
+    const pollingInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(`/api/payments/order/${orderId}`, {
+          headers: {
+            'Authorization': `Bearer demo-token`,
+            'X-Demo-Mode': 'true'
+          }
+        });
+        
+        if (response.data.status === 'APPROVED') {
+          setPaymentStatus('APPROVED');
+          clearInterval(pollingInterval);
+        } else if (response.data.status === 'REJECTED') {
+          setPaymentStatus('REJECTED');
+          setError('Pagamento rejeitado. Por favor, tente novamente com outro método de pagamento.');
+          clearInterval(pollingInterval);
+        }
+      } catch (err) {
+        console.error('Erro ao verificar status do pagamento:', err);
+      }
+    }, 3000); // Verificar a cada 3 segundos
+    
+    return pollingInterval;
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setProcessingOrder(true);
     
     try {
-      // Simular processamento de pedido
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       // Gerar número de pedido aleatório
       const randomOrderNumber = Math.floor(100000 + Math.random() * 900000);
       setOrderNumber(randomOrderNumber);
+      setPaymentStatus('PENDING');
       
-      // Limpar o carrinho
-      await CartService.clearCart();
+      // Atualizar o estoque para cada item mesmo em modo demo
+      try {
+        // Obter token demo
+        const demoToken = localStorage.getItem('demo_token') || 'demo-token';
+        
+        for (const item of cartItems) {
+          await axios.put(`/api/products/${item.id}/stock?quantity=-${item.quantity}`, {}, {
+            headers: {
+              'Authorization': `Bearer ${demoToken}`,
+              'X-Demo-Mode': 'true'
+            }
+          });
+        }
+      } catch (stockErr) {
+        console.error('Erro ao atualizar estoque em modo demo:', stockErr);
+      }
       
-      // Atualizar o header com a nova contagem do carrinho
-      const event = new CustomEvent('cart-updated');
-      window.dispatchEvent(event);
+      // Enviar informações de pagamento para processamento
+      const paymentRequest = {
+        orderId: parseInt(randomOrderNumber.toString()),
+        userId: "demo-user",
+        amount: parseFloat(calculateTotal()),
+        paymentMethod: formData.paymentMethod.toUpperCase()
+      };
       
-      // Mostrar sucesso
-      setOrderSuccess(true);
+      try {
+        // Use o endpoint de teste que sabemos que funciona via curl
+        await axios.post('/api/payments', paymentRequest, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Demo-Mode': 'true',
+            'Authorization': 'Bearer demo-token'
+          }
+        });
+        
+        // Iniciar a escuta por atualizações de pagamento
+        const connection = listenForPaymentUpdates(randomOrderNumber.toString());
+        
+        // Simular uma resposta de aprovação após alguns segundos (apenas para demonstração)
+        setTimeout(() => {
+          setPaymentStatus('APPROVED');
+          if (connection) {
+            if (connection instanceof WebSocket) {
+              connection.close();
+            } else {
+              clearInterval(connection);
+            }
+          }
+          
+          // Limpar o carrinho quando o pagamento for aprovado
+          CartService.clearCart().then(() => {
+            // Atualizar o header com a nova contagem do carrinho
+            const event = new CustomEvent('cart-updated');
+            window.dispatchEvent(event);
+            
+            // Mostrar sucesso após status de pagamento aprovado
+            setOrderSuccess(true);
+            setProcessingOrder(false);
+          });
+          
+        }, 5000);
+        
+      } catch (paymentErr) {
+        console.error('Erro ao processar pagamento em modo demo:', paymentErr);
+        setError('Erro ao processar pagamento. Por favor, tente novamente.');
+        setProcessingOrder(false);
+        return;
+      }
     } catch (err) {
       console.error('Erro ao processar pedido demo:', err);
       setError('Erro ao processar o pedido. Por favor, tente novamente.');
-    } finally {
       setProcessingOrder(false);
     }
   };
@@ -110,6 +226,37 @@ const CheckoutDemo = () => {
       <Container className="text-center my-5">
         <Spinner animation="border" />
         <p className="mt-3">Carregando informações do checkout...</p>
+      </Container>
+    );
+  }
+  
+  // Tela de espera de pagamento
+  if (paymentStatus === 'PENDING') {
+    return (
+      <Container className="py-5">
+        <Card className="text-center p-5 shadow-sm">
+          <Alert variant="info" className="mb-4">
+            <h1>Aguardando Confirmação de Pagamento</h1>
+            <p className="lead">Seu pedido foi criado e estamos processando o pagamento</p>
+            <Badge bg="warning" text="dark">DEMONSTRAÇÃO</Badge>
+          </Alert>
+          
+          <div className="text-center my-4">
+            <Spinner animation="border" variant="primary" style={{ width: '4rem', height: '4rem' }} />
+            <h4 className="mt-4">Processando seu pagamento...</h4>
+            <p>Não feche esta janela. Você será redirecionado automaticamente quando o pagamento for confirmado.</p>
+          </div>
+          
+          <div className="text-start my-4">
+            <h4>Resumo do Pedido #{orderNumber}</h4>
+            <p><strong>Data:</strong> {new Date().toLocaleString('pt-BR')}</p>
+            <p><strong>Total:</strong> R$ {calculateTotal()}</p>
+            <p>
+              <strong>Status:</strong>{' '}
+              <span className="badge bg-warning text-dark">Aguardando Pagamento</span>
+            </p>
+          </div>
+        </Card>
       </Container>
     );
   }
@@ -130,7 +277,11 @@ const CheckoutDemo = () => {
             <p><strong>Total:</strong> R$ {calculateTotal()}</p>
             <p>
               <strong>Status:</strong>{' '}
-              <span className="badge bg-info">Processando (Demo)</span>
+              {paymentStatus === 'APPROVED' ? (
+                <span className="badge bg-success">Pagamento Confirmado</span>
+              ) : (
+                <span className="badge bg-info">Processando (Demo)</span>
+              )}
             </p>
             
             <h5 className="mt-4">Informações de Entrega</h5>

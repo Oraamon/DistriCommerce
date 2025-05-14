@@ -9,6 +9,7 @@ import com.ecommerce.order.model.PaymentStatus;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,12 +19,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.ecommerce.order.config.RabbitMQConfig.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
+    private final RabbitTemplate rabbitTemplate;
+    private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
     @Override
     @Transactional
@@ -34,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setShippingAddress(orderRequest.getShippingAddress());
         order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setPaymentMethod(orderRequest.getPaymentMethod());
         order.setUpdatedAt(LocalDateTime.now());
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -58,6 +66,29 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
+
+        // Atualizar estoque dos produtos
+        for (OrderItem item : orderItems) {
+            try {
+                productClient.updateStock(item.getProductId(), -item.getQuantity());
+                log.info("Estoque atualizado para produto: {}, quantidade: {}", 
+                    item.getProductId(), -item.getQuantity());
+            } catch (Exception e) {
+                log.error("Erro ao atualizar estoque do produto: {}", item.getProductId(), e);
+                throw new RuntimeException("Erro ao atualizar estoque do produto: " + item.getProductId());
+            }
+        }
+
+        // Envia o pedido para processamento de pagamento
+        PaymentRequest paymentRequest = PaymentRequest.builder()
+                .orderId(savedOrder.getId())
+                .userId(savedOrder.getUserId())
+                .amount(savedOrder.getTotalAmount())
+                .paymentMethod(savedOrder.getPaymentMethod())
+                .build();
+
+        rabbitTemplate.convertAndSend(PAYMENT_EXCHANGE, PAYMENT_ROUTING_KEY, paymentRequest);
+
         return mapToOrderResponse(savedOrder);
     }
 
@@ -131,6 +162,7 @@ public class OrderServiceImpl implements OrderService {
                 .shippingAddress(order.getShippingAddress())
                 .trackingNumber(order.getTrackingNumber())
                 .paymentStatus(order.getPaymentStatus())
+                .paymentMethod(order.getPaymentMethod())
                 .build();
     }
 } 

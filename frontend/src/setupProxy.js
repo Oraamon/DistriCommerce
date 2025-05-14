@@ -1,15 +1,14 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 module.exports = function(app) {
-  console.log('Configurando proxy para /api -> http://backend:8080/api');
+  console.log('Configurando proxy para /api -> http://gateway-service:8080/api');
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://backend:8080',
+      target: 'http://gateway-service:8080',
       changeOrigin: true,
-      pathRewrite: {
-        '^/api': '/api',
-      },
+      secure: false,
+      logLevel: 'debug',
       onProxyReq: (proxyReq, req) => {
         console.log(`Proxying ${req.method} request:`, req.url);
       },

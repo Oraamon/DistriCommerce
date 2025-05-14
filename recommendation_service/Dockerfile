@@ -6,8 +6,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Criar diretório protos
+RUN mkdir -p protos
+
 # Copiar os arquivos proto
-COPY protos/ ./protos/
+COPY protos/recommendation.proto ./protos/
 
 # Gerar código Python a partir do proto
 RUN python -m grpc_tools.protoc -I./protos --python_out=. --grpc_python_out=. ./protos/recommendation.proto

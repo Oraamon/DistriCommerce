@@ -26,47 +26,19 @@ const OrderList = () => {
       
       let ordersList = [];
       
-      const demoOrders = JSON.parse(localStorage.getItem('demo_orders') || '[]');
-      
-      if (demoOrders.length > 0 || isDemo) {
-        console.log("OrderList - Usando dados de pedidos de demonstração");
-        ordersList = demoOrders;
-        
-        if (ordersList.length === 0) {
-          ordersList = [
-            {
-              id: 'order_' + (Date.now() - 86400000),
-              createdAt: new Date(Date.now() - 86400000).toISOString(),
-              totalPrice: 456.78,
-              status: 'processing'
-            },
-            {
-              id: 'order_' + (Date.now() - 604800000),
-              createdAt: new Date(Date.now() - 604800000).toISOString(),
-              totalPrice: 123.45,
-              status: 'delivered'
-            }
-          ];
-        }
-      } else {
-        try {
-          const response = await axios.get('/api/orders', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          ordersList = response.data;
-        } catch (apiError) {
-          console.error("Erro ao buscar pedidos da API:", apiError);
-          if (demoOrders.length > 0) {
-            ordersList = demoOrders;
-          } else {
-            throw apiError;
+      try {
+        const response = await axios.get(`/api/orders/user/${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        }
+        });
+        ordersList = response.data;
+      } catch (apiError) {
+        console.error("Erro ao buscar pedidos da API:", apiError);
+        setError('Erro ao carregar os pedidos. Por favor, tente novamente.');
       }
       
-      ordersList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      ordersList.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
       
       setOrders(ordersList);
       setLoading(false);
@@ -93,16 +65,16 @@ const OrderList = () => {
   };
   
   const getStatusBadgeVariant = (status) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
+    switch (status) {
+      case 'PENDING':
         return 'warning';
-      case 'processing':
+      case 'CONFIRMED':
         return 'info';
-      case 'shipped':
+      case 'SHIPPED':
         return 'primary';
-      case 'delivered':
+      case 'DELIVERED':
         return 'success';
-      case 'cancelled':
+      case 'CANCELED':
         return 'danger';
       default:
         return 'secondary';
@@ -110,16 +82,16 @@ const OrderList = () => {
   };
   
   const getStatusText = (status) => {
-    switch (status.toLowerCase()) {
-      case 'pending':
+    switch (status) {
+      case 'PENDING':
         return 'Pendente';
-      case 'processing':
-        return 'Processando';
-      case 'shipped':
+      case 'CONFIRMED':
+        return 'Confirmado';
+      case 'SHIPPED':
         return 'Enviado';
-      case 'delivered':
+      case 'DELIVERED':
         return 'Entregue';
-      case 'cancelled':
+      case 'CANCELED':
         return 'Cancelado';
       default:
         return status;
@@ -174,8 +146,8 @@ const OrderList = () => {
             {orders.map(order => (
               <tr key={order.id}>
                 <td>{order.id}</td>
-                <td>{formatDate(order.createdAt)}</td>
-                <td>R$ {order.totalPrice.toFixed(2)}</td>
+                <td>{formatDate(order.orderDate)}</td>
+                <td>R$ {order.totalAmount.toFixed(2)}</td>
                 <td>
                   <Badge bg={getStatusBadgeVariant(order.status)}>
                     {getStatusText(order.status)}

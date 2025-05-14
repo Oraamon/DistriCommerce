@@ -1,4 +1,4 @@
-package com.ecommerce.payment.config;
+package com.ecommerce.order.config;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -14,14 +14,10 @@ public class RabbitMQConfig {
     public static final String PAYMENT_QUEUE = "payment.queue";
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
     public static final String PAYMENT_ROUTING_KEY = "payment.routing.key";
-    
+
     public static final String PAYMENT_RESULT_QUEUE = "payment.result.queue";
     public static final String PAYMENT_RESULT_EXCHANGE = "payment.result.exchange";
     public static final String PAYMENT_RESULT_ROUTING_KEY = "payment.result.routing.key";
-
-    public static final String PAYMENT_LOG_QUEUE = "payment.log.queue";
-    public static final String PAYMENT_LOG_EXCHANGE = "payment.log.exchange";
-    public static final String PAYMENT_LOG_ROUTING_KEY = "payment.log.routing.key";
 
     @Bean
     public Queue paymentQueue() {
@@ -31,11 +27,6 @@ public class RabbitMQConfig {
     @Bean
     public Queue paymentResultQueue() {
         return new Queue(PAYMENT_RESULT_QUEUE, true);
-    }
-
-    @Bean
-    public Queue paymentLogQueue() {
-        return new Queue(PAYMENT_LOG_QUEUE, true);
     }
 
     @Bean
@@ -49,11 +40,6 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public TopicExchange paymentLogExchange() {
-        return new TopicExchange(PAYMENT_LOG_EXCHANGE);
-    }
-
-    @Bean
     public Binding paymentBinding(Queue paymentQueue, TopicExchange paymentExchange) {
         return BindingBuilder.bind(paymentQueue).to(paymentExchange).with(PAYMENT_ROUTING_KEY);
     }
@@ -61,11 +47,6 @@ public class RabbitMQConfig {
     @Bean
     public Binding paymentResultBinding(Queue paymentResultQueue, TopicExchange paymentResultExchange) {
         return BindingBuilder.bind(paymentResultQueue).to(paymentResultExchange).with(PAYMENT_RESULT_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding paymentLogBinding(Queue paymentLogQueue, TopicExchange paymentLogExchange) {
-        return BindingBuilder.bind(paymentLogQueue).to(paymentLogExchange).with(PAYMENT_LOG_ROUTING_KEY);
     }
 
     @Bean
