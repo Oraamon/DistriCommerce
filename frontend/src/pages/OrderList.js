@@ -60,8 +60,22 @@ const OrderList = () => {
   };
   
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('pt-BR', options);
+    if (!dateString) return 'Data indisponível';
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) {
+        return 'Data indisponível';
+      }
+      
+      const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+      return date.toLocaleDateString('pt-BR', options);
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data indisponível';
+    }
   };
   
   const getStatusBadgeVariant = (status) => {
@@ -146,8 +160,8 @@ const OrderList = () => {
             {orders.map(order => (
               <tr key={order.id}>
                 <td>{order.id}</td>
-                <td>{formatDate(order.orderDate)}</td>
-                <td>R$ {order.totalAmount.toFixed(2)}</td>
+                <td>{formatDate(order.orderDate || order.createdAt)}</td>
+                <td>R$ {order.totalAmount ? order.totalAmount.toFixed(2) : order.totalPrice ? order.totalPrice.toFixed(2) : '0.00'}</td>
                 <td>
                   <Badge bg={getStatusBadgeVariant(order.status)}>
                     {getStatusText(order.status)}

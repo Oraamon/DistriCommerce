@@ -184,7 +184,22 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentResponse mapToResponse(Payment payment) {
         PaymentResponse response = new PaymentResponse();
         response.setPaymentId(payment.getId().toString());
-        response.setOrderId(payment.getOrderId());
+        
+        // Converte o orderId para Long se não for temporário
+        String orderId = payment.getOrderId();
+        if (orderId != null && !orderId.startsWith("temp-")) {
+            try {
+                response.setOrderId(Long.parseLong(orderId));
+            } catch (NumberFormatException e) {
+                log.warn("Não foi possível converter o ID do pedido para Long: {}", orderId);
+                // Para não quebrar a resposta, definimos como null
+                response.setOrderId(null);
+            }
+        } else {
+            // Para IDs temporários, definimos como null
+            response.setOrderId(null);
+        }
+        
         response.setAmount(payment.getAmount());
         response.setStatus(payment.getStatus().toString());
         response.setPaymentMethod(payment.getPaymentMethod());

@@ -111,8 +111,22 @@ const OrderDetails = () => {
   }, [orderId, navigate]);
   
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('pt-BR', options);
+    if (!dateString) return 'Data indisponível';
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) {
+        return 'Data indisponível';
+      }
+      
+      const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+      return date.toLocaleDateString('pt-BR', options);
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data indisponível';
+    }
   };
   
   const getStatusBadgeVariant = (status) => {
@@ -187,27 +201,27 @@ const OrderDetails = () => {
             </Card.Header>
             <ListGroup variant="flush">
               {order.items && order.items.map(item => (
-                <ListGroup.Item key={item.id}>
+                <ListGroup.Item key={item.id || `item-${Math.random()}`}>
                   <Row className="align-items-center">
                     <Col md={2}>
                       <img 
-                        src={item.product?.imageUrl || 'https://via.placeholder.com/80'}
-                        alt={item.product?.name}
+                        src={item.product?.imageUrl || item.imageUrl || 'https://via.placeholder.com/80'}
+                        alt={item.product?.name || item.name || 'Produto'}
                         className="img-fluid rounded"
                       />
                     </Col>
                     <Col md={6}>
-                      <h6>{item.product?.name}</h6>
+                      <h6>{item.product?.name || item.name || 'Produto'}</h6>
                       <small className="text-muted">
-                        {item.product?.description?.substring(0, 100)}
-                        {item.product?.description?.length > 100 ? '...' : ''}
+                        {(item.product?.description || item.description || '').substring(0, 100)}
+                        {(item.product?.description || item.description || '').length > 100 ? '...' : ''}
                       </small>
                     </Col>
                     <Col md={2} className="text-center">
                       <span>x{item.quantity}</span>
                     </Col>
                     <Col md={2} className="text-end">
-                      <span>R$ {item.price?.toFixed(2)}</span>
+                      <span>R$ {(item.price || 0).toFixed(2)}</span>
                     </Col>
                   </Row>
                 </ListGroup.Item>
@@ -281,25 +295,25 @@ const OrderDetails = () => {
               <ListGroup.Item>
                 <div className="d-flex justify-content-between">
                   <span>Data do Pedido:</span>
-                  <span>{formatDate(order.createdAt)}</span>
+                  <span>{formatDate(order.createdAt || order.orderDate)}</span>
                 </div>
               </ListGroup.Item>
               <ListGroup.Item>
                 <div className="d-flex justify-content-between">
                   <span>Subtotal:</span>
-                  <span>R$ {(order.totalPrice - order.shippingPrice).toFixed(2)}</span>
+                  <span>R$ {((order.totalPrice || order.totalAmount || 0) - (order.shippingPrice || 0)).toFixed(2)}</span>
                 </div>
               </ListGroup.Item>
               <ListGroup.Item>
                 <div className="d-flex justify-content-between">
                   <span>Frete:</span>
-                  <span>R$ {order.shippingPrice?.toFixed(2)}</span>
+                  <span>R$ {(order.shippingPrice || 0).toFixed(2)}</span>
                 </div>
               </ListGroup.Item>
               <ListGroup.Item>
                 <div className="d-flex justify-content-between fw-bold">
                   <span>Total:</span>
-                  <span>R$ {order.totalPrice?.toFixed(2)}</span>
+                  <span>R$ {(order.totalPrice || order.totalAmount || 0).toFixed(2)}</span>
                 </div>
               </ListGroup.Item>
             </ListGroup>

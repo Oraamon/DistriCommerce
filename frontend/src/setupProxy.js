@@ -26,16 +26,24 @@ module.exports = function(app) {
   app.use(
     '/payments',
     createProxyMiddleware({
-      target: 'http://payment-service:8083/api/payments/direct',
+      target: 'http://payment-service:8083/api/payments',
       changeOrigin: true,
       secure: false,
       pathRewrite: {'^/payments': ''},
       logLevel: 'debug',
       onProxyReq: (proxyReq, req) => {
-        console.log(`Proxying direct payment ${req.method} request:`, req.url);
+        console.log(`Proxying payment ${req.method} request:`, req.url);
+        
+        // Garantir que o Content-Type esteja definido corretamente
+        proxyReq.setHeader('Content-Type', 'application/json');
+        
+        // Log do corpo da requisição para depuração
+        if (req.body) {
+          console.log('Payment request body:', req.body);
+        }
       },
       onError: (err, req, res) => {
-        console.error('Direct payment proxy error:', err);
+        console.error('Payment proxy error:', err);
         
         // Criar resposta de fallback para simulação
         if (req.method === 'POST') {
@@ -46,9 +54,12 @@ module.exports = function(app) {
             'Content-Type': 'application/json',
           });
           
+          // Extrair orderId da requisição ou gerar um aleatório
+          const orderId = Math.floor(100000 + Math.random() * 900000);
+          
           const simulatedResponse = {
             paymentId: uuidv4(),
-            orderId: uuidv4(),
+            orderId: orderId,
             status: 'APPROVED',
             transactionId: `fallback-${uuidv4().substring(0, 8)}`,
             paymentDate: new Date().toISOString(),
