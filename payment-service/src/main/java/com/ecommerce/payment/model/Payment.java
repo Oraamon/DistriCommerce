@@ -29,6 +29,9 @@ public class Payment {
     private PaymentStatus status;
 
     @Column(nullable = false)
+    private String paymentMethod;
+
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Column

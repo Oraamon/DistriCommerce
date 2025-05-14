@@ -11,9 +11,31 @@ class PaymentService {
    * @returns {Promise} Resposta da API com o resultado do processamento
    */
   async processPayment(paymentRequest) {
-    // Devido a problemas com os bancos de dados, estamos usando processamento local
-    console.log('Usando processamento local devido à indisponibilidade do serviço de pagamento');
-    return this.processPaymentLocally(paymentRequest);
+    try {
+      // Tentar processar o pagamento via API
+      const response = await axios.post('/api/payments', paymentRequest);
+      console.log('Pagamento processado com sucesso via API:', response.data);
+      
+      // Verificar se o backend falhou em atualizar o estoque, fazendo um fallback
+      if (paymentRequest.orderItems && paymentRequest.orderItems.length > 0) {
+        try {
+          // Verificar o status do pagamento para decidir o que fazer com o estoque
+          if (response.data.status === 'APPROVED' || response.data.status === 'COMPLETED') {
+            // Dupla verificação para garantir que o estoque foi atualizado
+            console.log('Verificando atualização de estoque após pagamento aprovado');
+            await this.updateProductStock(paymentRequest.orderItems, 'decrease');
+          }
+        } catch (stockError) {
+          console.error('Erro ao verificar/atualizar estoque após pagamento:', stockError);
+        }
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao processar pagamento via API:', error);
+      console.log('Usando processamento local devido à indisponibilidade do serviço de pagamento');
+      return this.processPaymentLocally(paymentRequest);
+    }
   }
 
   /**
@@ -40,7 +62,58 @@ class PaymentService {
     payments.push(response);
     localStorage.setItem('local_payments', JSON.stringify(payments));
     
+    // Diminuir estoque manualmente quando em modo local
+    this.updateProductStock(paymentRequest.orderItems, 'decrease');
+    
     return response;
+  }
+  
+  /**
+   * Atualiza o estoque dos produtos após pagamento ou reembolso
+   * @param {Array} items Itens do pedido
+   * @param {string} action 'decrease' ou 'increase'
+   */
+  async updateProductStock(items, action = 'decrease') {
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      console.warn('Nenhum item fornecido para atualização de estoque');
+      return;
+    }
+    
+    console.log(`Atualizando estoque para ${items.length} produtos. Ação: ${action}`);
+    
+    for (const item of items) {
+      try {
+        // Garantir que temos um ID de produto válido
+        const productId = item.productId || item.id;
+        if (!productId) {
+          console.error('ID de produto não encontrado para o item:', item);
+          continue;
+        }
+        
+        const quantity = item.quantity || 1;
+        const endpoint = action === 'decrease' 
+          ? `/api/products/${productId}/decrease-stock?quantity=${quantity}`
+          : `/api/products/${productId}/increase-stock?quantity=${quantity}`;
+          
+        console.log(`Chamando endpoint: ${endpoint}`);
+        const response = await axios.post(endpoint);
+        console.log(`Estoque ${action === 'decrease' ? 'diminuído' : 'aumentado'} para o produto ${productId}. Resposta:`, response.data);
+      } catch (error) {
+        console.error(`Erro ao ${action === 'decrease' ? 'diminuir' : 'aumentar'} estoque para o produto ${item.productId || item.id}:`, error);
+        // Tentar novamente com um endpoint alternativo
+        try {
+          const productId = item.productId || item.id;
+          const quantity = item.quantity || 1;
+          // Endpoint alternativo que pode estar disponível em algumas versões do backend
+          const altEndpoint = `/api/products/${productId}/stock?quantity=${action === 'decrease' ? -quantity : quantity}`;
+          console.log(`Tentando endpoint alternativo: ${altEndpoint}`);
+          await axios.put(altEndpoint);
+          console.log(`Estoque atualizado via endpoint alternativo para o produto ${productId}`);
+        } catch (altError) {
+          console.error(`Também falhou no endpoint alternativo:`, altError);
+        }
+      }
+    }
   }
 
   /**
@@ -87,10 +160,24 @@ class PaymentService {
    * @param {Object} refundData Dados do reembolso (opcional)
    * @returns {Promise} Resposta da API com o resultado do reembolso
    */
-  async requestRefund(paymentId, refundData = {}) {
+  async requestRefund(orderId, refundData = {}) {
+    try {
+      // Tentar processar reembolso via API
+      const response = await axios.post(`/api/payments/refund/${orderId}`);
+      console.log('Reembolso processado com sucesso via API:', response.data);
+      
+      // Atualizar estoque apenas se estamos usando o backend
+      if (response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Erro ao processar reembolso via API:', error);
+      console.log('Usando processamento local de reembolso');
+    }
+    
     // Buscar o pagamento localmente
     const payments = JSON.parse(localStorage.getItem('local_payments') || '[]');
-    const paymentIndex = payments.findIndex(p => p.paymentId === paymentId);
+    const paymentIndex = payments.findIndex(p => p.orderId === orderId);
     
     if (paymentIndex >= 0) {
       // Atualizar status do pagamento para refunded
@@ -100,6 +187,11 @@ class PaymentService {
       
       // Salvar atualizações
       localStorage.setItem('local_payments', JSON.stringify(payments));
+      
+      // Aumentar estoque para os itens do pedido
+      if (refundData.items) {
+        this.updateProductStock(refundData.items, 'increase');
+      }
       
       return {
         ...payments[paymentIndex],

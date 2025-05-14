@@ -3,12 +3,14 @@ import { Alert, Button, Card, Col, Container, ListGroup, Row, Badge } from 'reac
 import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
+import axios from 'axios';
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [stockLevels, setStockLevels] = useState({});
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -30,6 +32,20 @@ const Cart = () => {
         // Buscar itens do carrinho usando o CartService
         const items = await CartService.getCartItems();
         setCartItems(items);
+        
+        // Buscar níveis de estoque para cada produto
+        const stockData = {};
+        for (const item of items) {
+          try {
+            const response = await axios.get(`/api/products/${item.productId || item.id}`);
+            stockData[item.productId || item.id] = response.data.quantity;
+          } catch (err) {
+            console.error(`Erro ao buscar estoque para o produto ${item.productId || item.id}:`, err);
+            stockData[item.productId || item.id] = 0;
+          }
+        }
+        setStockLevels(stockData);
+        
         setLoading(false);
       } catch (err) {
         console.error('Erro ao carregar carrinho:', err);
@@ -58,6 +74,15 @@ const Cart = () => {
   const handleUpdateQuantity = async (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     
+    // Verificar estoque disponível
+    const productId = cartItems.find(item => item.id === itemId)?.productId || itemId;
+    const availableStock = stockLevels[productId];
+    
+    if (availableStock !== undefined && newQuantity > availableStock) {
+      setError(`Estoque insuficiente. Apenas ${availableStock} unidades disponíveis.`);
+      return;
+    }
+    
     try {
       await CartService.updateCartItem(itemId, newQuantity);
       
@@ -75,6 +100,18 @@ const Cart = () => {
   };
   
   const handleCheckout = () => {
+    // Verificar se há estoque suficiente para todos os itens
+    const outOfStockItems = cartItems.filter(item => {
+      const productId = item.productId || item.id;
+      return stockLevels[productId] < item.quantity;
+    });
+    
+    if (outOfStockItems.length > 0) {
+      const itemNames = outOfStockItems.map(item => item.name).join(", ");
+      setError(`Estoque insuficiente para: ${itemNames}. Por favor, ajuste as quantidades.`);
+      return;
+    }
+    
     if (demoMode) {
       // Redirecionar para o checkout em modo demo
       navigate('/checkout-demo');
@@ -131,6 +168,13 @@ const Cart = () => {
                       <Col md={4}>
                         <h5>{item.name}</h5>
                         <p className="text-muted">R$ {item.price.toFixed(2)}</p>
+                        {stockLevels[item.productId || item.id] !== undefined && (
+                          <small className={stockLevels[item.productId || item.id] < item.quantity ? "text-danger" : "text-success"}>
+                            {stockLevels[item.productId || item.id] < item.quantity 
+                              ? `Estoque insuficiente (${stockLevels[item.productId || item.id]} disponíveis)`
+                              : `Em estoque: ${stockLevels[item.productId || item.id]} unidades`}
+                          </small>
+                        )}
                       </Col>
                       <Col md={3}>
                         <div className="d-flex align-items-center">
@@ -194,9 +238,15 @@ const Cart = () => {
                     variant="primary" 
                     className="w-100 mt-3"
                     onClick={handleCheckout}
+                    disabled={cartItems.some(item => stockLevels[item.productId || item.id] < item.quantity)}
                   >
                     {demoMode ? 'Finalizar Compra (Demo)' : 'Finalizar Compra'}
                   </Button>
+                  {cartItems.some(item => stockLevels[item.productId || item.id] < item.quantity) && (
+                    <div className="mt-2 text-center text-danger">
+                      <small>Alguns itens estão com estoque insuficiente</small>
+                    </div>
+                  )}
                   {demoMode && (
                     <div className="mt-2 text-center text-muted">
                       <small>Modo de demonstração: Pagamento simulado</small>

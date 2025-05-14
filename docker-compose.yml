@@ -40,7 +40,7 @@ services:
       - WDS_SOCKET_PORT=0
       - WATCHPACK_POLLING=true
       - FAST_REFRESH=true
-      - REACT_APP_BACKEND_URL=http://gateway-service:8090
+      - REACT_APP_BACKEND_URL=http://localhost:8090
     depends_on:
       - gateway-service
     networks:
@@ -50,6 +50,12 @@ services:
       - /app/node_modules
     stdin_open: true
     tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   eureka-server:
     build:
@@ -133,10 +139,23 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - eureka-server
-      - mongodb
+      eureka-server:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/ecommerce
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SERVICES_ORDER-SERVICE_URL=http://order-service:8082
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
   order-service:
     container_name: order-service
@@ -151,12 +170,20 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
+      product-service:
+        condition: service_healthy
     ports:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-    volumes:
-      - ./order-service/src:/workspace/app/order-service/src
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ecommerce_order
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
     networks:
       - ecommerce-network
     healthcheck:
@@ -164,7 +191,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 60s
 
   payment-service:
     container_name: payment-service
@@ -183,8 +210,14 @@ services:
       - "8083:8083"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-    volumes:
-      - ./payment-service/src:/workspace/app/payment-service/src
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/ecommerce_payment
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
     networks:
       - ecommerce-network
     healthcheck:
@@ -192,7 +225,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 60s
 
   user-service:
     build: ./user-service

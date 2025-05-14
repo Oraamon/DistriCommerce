@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Badge, Card, Col, Container, ListGroup, Row, Spinner } from 'react-bootstrap';
+import { Alert, Badge, Card, Col, Container, ListGroup, Row, Spinner, Button, Modal } from 'react-bootstrap';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AuthService from '../services/AuthService';
+import PaymentService from '../services/PaymentService';
 
 const OrderDetails = () => {
   const [order, setOrder] = useState(null);
@@ -10,6 +11,10 @@ const OrderDetails = () => {
   const [error, setError] = useState(null);
   const { orderId } = useParams();
   const navigate = useNavigate();
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundSuccess, setRefundSuccess] = useState(false);
+  const [refundError, setRefundError] = useState(null);
   
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -174,6 +179,40 @@ const OrderDetails = () => {
     }
   };
   
+  const handleRefund = async () => {
+    setRefundLoading(true);
+    setRefundError(null);
+    
+    try {
+      // Fazer o pedido de reembolso com os itens para atualização de estoque
+      const refundResponse = await PaymentService.requestRefund(order.id, {
+        amount: order.totalAmount || order.total,
+        items: order.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }))
+      });
+      
+      console.log('Reembolso processado:', refundResponse);
+      setRefundSuccess(true);
+      
+      // Atualizar o status do pedido na interface
+      setOrder({
+        ...order,
+        status: 'REFUNDED'
+      });
+    } catch (error) {
+      console.error('Erro ao processar reembolso:', error);
+      setRefundError('Falha ao processar o reembolso. Por favor, tente novamente.');
+    } finally {
+      setRefundLoading(false);
+    }
+  };
+  
+  const canRefund = order && 
+    (order.status === 'COMPLETED' || order.status === 'CONFIRMED' || order.status === 'PENDING') &&
+    order.payment?.status !== 'REFUNDED';
+  
   if (loading) return (
     <div className="text-center my-5">
       <Spinner animation="border" role="status">
@@ -188,9 +227,21 @@ const OrderDetails = () => {
     <Container className="py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Pedido #{order.id}</h2>
-        <Badge bg={getStatusBadgeVariant(order.status)} className="fs-6 py-2 px-3">
-          {getStatusText(order.status)}
-        </Badge>
+        <div className="d-flex align-items-center gap-3">
+          <Badge bg={getStatusBadgeVariant(order.status)} className="fs-6 py-2 px-3">
+            {getStatusText(order.status)}
+          </Badge>
+          
+          {canRefund && (
+            <Button 
+              variant="outline-danger" 
+              size="sm"
+              onClick={() => setShowRefundModal(true)}
+            >
+              Solicitar Reembolso
+            </Button>
+          )}
+        </div>
       </div>
       
       <Row>
@@ -206,12 +257,15 @@ const OrderDetails = () => {
                     <Col md={2}>
                       <img 
                         src={item.product?.imageUrl || item.imageUrl || 'https://via.placeholder.com/80'}
-                        alt={item.product?.name || item.name || 'Produto'}
+                        alt={item.productName || item.product?.name || item.name || 'Produto'}
                         className="img-fluid rounded"
                       />
                     </Col>
                     <Col md={6}>
-                      <h6>{item.product?.name || item.name || 'Produto'}</h6>
+                      <h6>{item.productName || item.product?.name || item.name || 'Produto'}</h6>
+                      <p className="text-muted mb-0">
+                        ID: {item.productId}
+                      </p>
                       <small className="text-muted">
                         {(item.product?.description || item.description || '').substring(0, 100)}
                         {(item.product?.description || item.description || '').length > 100 ? '...' : ''}
@@ -221,7 +275,12 @@ const OrderDetails = () => {
                       <span>x{item.quantity}</span>
                     </Col>
                     <Col md={2} className="text-end">
-                      <span>R$ {(item.price || 0).toFixed(2)}</span>
+                      <span>R$ {(item.price || item.subtotal/item.quantity || 0).toFixed(2)}</span>
+                      {item.subtotal && (
+                        <p className="text-muted mb-0">
+                          <small>Total: R$ {item.subtotal.toFixed(2)}</small>
+                        </p>
+                      )}
                     </Col>
                   </Row>
                 </ListGroup.Item>
@@ -331,6 +390,53 @@ const OrderDetails = () => {
           </div>
         </Col>
       </Row>
+      
+      {/* Modal de confirmação de reembolso */}
+      <Modal show={showRefundModal} onHide={() => !refundLoading && setShowRefundModal(false)}>
+        <Modal.Header closeButton={!refundLoading}>
+          <Modal.Title>Confirmar Reembolso</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {refundLoading ? (
+            <div className="text-center my-4">
+              <Spinner animation="border" />
+              <p className="mt-2">Processando reembolso...</p>
+            </div>
+          ) : refundSuccess ? (
+            <Alert variant="success">
+              Reembolso processado com sucesso. O estoque dos produtos foi atualizado.
+            </Alert>
+          ) : (
+            <>
+              <p>Tem certeza que deseja solicitar o reembolso deste pedido?</p>
+              <p>Esta ação irá:</p>
+              <ul>
+                <li>Cancelar seu pedido</li>
+                <li>Iniciar o processo de reembolso</li>
+                <li>Devolver os itens ao estoque</li>
+              </ul>
+              {refundError && <Alert variant="danger">{refundError}</Alert>}
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {!refundLoading && !refundSuccess && (
+            <>
+              <Button variant="secondary" onClick={() => setShowRefundModal(false)}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleRefund}>
+                Confirmar Reembolso
+              </Button>
+            </>
+          )}
+          {refundSuccess && (
+            <Button variant="primary" onClick={() => setShowRefundModal(false)}>
+              Fechar
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };

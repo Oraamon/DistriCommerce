@@ -66,9 +66,17 @@ public class OrderServiceImpl implements OrderService {
         // Atualizar estoque dos produtos
         for (OrderItem item : orderItems) {
             try {
-                productClient.updateStock(item.getProductId(), -item.getQuantity());
-                log.info("Estoque atualizado para produto: {}, quantidade: {}", 
-                    item.getProductId(), -item.getQuantity());
+                try {
+                    productClient.updateStock(item.getProductId(), -item.getQuantity());
+                    log.info("Estoque atualizado para produto: {}, quantidade: {}", 
+                        item.getProductId(), -item.getQuantity());
+                } catch (Exception e) {
+                    log.warn("Falha ao atualizar estoque via endpoint principal, tentando endpoint alternativo: {}", e.getMessage());
+                    // Tentar com endpoint alternativo
+                    productClient.decreaseStock(item.getProductId(), item.getQuantity());
+                    log.info("Estoque atualizado para produto via endpoint alternativo: {}, quantidade: {}", 
+                        item.getProductId(), item.getQuantity());
+                }
             } catch (Exception e) {
                 log.error("Erro ao atualizar estoque do produto: {}", item.getProductId(), e);
                 throw new RuntimeException("Erro ao atualizar estoque do produto: " + item.getProductId());
@@ -102,18 +110,17 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        // Para cada item, definimos um preço fixo simplificado
+        // Busca os detalhes reais do produto para cada item
         for (OrderItemRequest itemRequest : orderRequest.getItems()) {
+            ProductDto product = productClient.getProduct(itemRequest.getProductId());
+            
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
-            orderItem.setProductId(itemRequest.getProductId());
-            orderItem.setProductName("Produto " + itemRequest.getProductId()); // Nome genérico
+            orderItem.setProductId(product.getId());
+            orderItem.setProductName(product.getName());
             orderItem.setQuantity(itemRequest.getQuantity());
-            
-            // Criamos um preço fictício para simplificar
-            BigDecimal unitPrice = new BigDecimal("99.99");
-            orderItem.setPrice(unitPrice);
-            orderItem.setSubtotal(unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+            orderItem.setPrice(product.getPrice());
+            orderItem.setSubtotal(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
             
             orderItems.add(orderItem);
             totalAmount = totalAmount.add(orderItem.getSubtotal());
@@ -126,8 +133,42 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Pedido simplificado salvo com ID: {}", savedOrder.getId());
 
-        // Não atualizamos o estoque nem enviamos para processamento de pagamento
-        // para manter o processo simples e independente de outros serviços
+        // Atualizar estoque dos produtos
+        for (OrderItem item : orderItems) {
+            try {
+                try {
+                    productClient.updateStock(item.getProductId(), -item.getQuantity());
+                    log.info("Estoque atualizado para produto em pedido simplificado: {}, quantidade: {}", 
+                        item.getProductId(), -item.getQuantity());
+                } catch (Exception e) {
+                    log.warn("Falha ao atualizar estoque via endpoint principal (pedido simplificado), tentando endpoint alternativo: {}", e.getMessage());
+                    // Tentar com endpoint alternativo
+                    productClient.decreaseStock(item.getProductId(), item.getQuantity());
+                    log.info("Estoque atualizado para produto via endpoint alternativo (pedido simplificado): {}, quantidade: {}", 
+                        item.getProductId(), item.getQuantity());
+                }
+            } catch (Exception e) {
+                log.error("Erro ao atualizar estoque do produto (pedido simplificado): {}", item.getProductId(), e);
+                // Log do erro mas não interrompe o processo para manter compatibilidade com implementação anterior
+                // Pode ser melhorado para lançar exceção se necessário
+            }
+        }
+
+        // Envia o pedido para processamento de pagamento
+        PaymentRequest paymentRequest = PaymentRequest.builder()
+                .orderId(savedOrder.getId())
+                .userId(savedOrder.getUserId())
+                .amount(savedOrder.getTotalAmount())
+                .paymentMethod(savedOrder.getPaymentMethod())
+                .build();
+
+        try {
+            rabbitTemplate.convertAndSend(PAYMENT_EXCHANGE, PAYMENT_ROUTING_KEY, paymentRequest);
+            log.info("Pedido simplificado enviado para processamento de pagamento");
+        } catch (Exception e) {
+            log.error("Erro ao enviar pedido simplificado para processamento de pagamento: {}", e.getMessage());
+            // Não interrompe o fluxo em caso de erro no RabbitMQ
+        }
 
         return mapToOrderResponse(savedOrder);
     }

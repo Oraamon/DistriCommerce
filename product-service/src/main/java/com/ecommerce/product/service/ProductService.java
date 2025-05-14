@@ -25,4 +25,8 @@ public interface ProductService {
     ProductResponse updateProduct(String id, ProductRequest productRequest);
     
     void deleteProduct(String id);
+    
+    boolean decreaseStock(String productId, int quantity);
+    
+    boolean increaseStock(String productId, int quantity);
 } 

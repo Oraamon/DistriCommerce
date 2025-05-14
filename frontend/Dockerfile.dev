@@ -2,15 +2,27 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Atualizar pacotes e adicionar ferramentas de diagnóstico
+RUN apk update && apk add --no-cache bash curl
+
+# Primeiro copiar apenas package.json e package-lock.json para aproveitar o cache do Docker
 COPY package*.json ./
 RUN npm install
 
 # Copiar todo o código-fonte do projeto
 COPY . .
 
+# Variáveis de ambiente para desenvolvimento
 ENV NODE_ENV=development
-ENV REACT_APP_BACKEND_URL=http://backend:8080
+ENV REACT_APP_BACKEND_URL=http://gateway-service:8080
+ENV WATCHPACK_POLLING=true
+ENV FAST_REFRESH=true
+ENV CHOKIDAR_USEPOLLING=true
 
 EXPOSE 3000
+
+# Health check para verificar se o servidor está respondendo
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000 || exit 1
 
 CMD ["npm", "start"] 

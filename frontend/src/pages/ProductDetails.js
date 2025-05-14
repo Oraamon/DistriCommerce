@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Card, Button, Row, Col, Alert, Spinner, Modal, Form, Toast, ToastContainer } from 'react-bootstrap';
+import { Card, Button, Row, Col, Alert, Spinner, Modal, Form, Toast, ToastContainer, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
@@ -77,6 +77,23 @@ const ProductDetails = () => {
     const value = parseInt(e.target.value);
     if (value > 0 && value <= product.quantity) {
       setQuantity(value);
+    } else if (value > product.quantity) {
+      setQuantity(product.quantity);
+      setToastMessage(`O estoque disponível é de apenas ${product.quantity} unidades.`);
+      setShowToast(true);
+    }
+  };
+
+  // Função para exibir o status de estoque
+  const getStockStatus = () => {
+    if (!product) return null;
+    
+    if (product.quantity <= 0) {
+      return <Badge bg="danger">Esgotado</Badge>;
+    } else if (product.quantity < 5) {
+      return <Badge bg="warning" text="dark">Estoque baixo: {product.quantity} unidades</Badge>;
+    } else {
+      return <Badge bg="success">Em estoque: {product.quantity} unidades</Badge>;
     }
   };
 
@@ -123,9 +140,9 @@ const ProductDetails = () => {
               <Card.Text className="fs-3 fw-bold text-primary">
                 R$ {product.price.toFixed(2)}
               </Card.Text>
-              <Card.Text className="fs-6 text-muted">
-                Disponível: {product.quantity} unidades
-              </Card.Text>
+              <div className="mb-3">
+                {getStockStatus()}
+              </div>
               <Card.Text>{product.description}</Card.Text>
               
               {product.quantity > 0 ? (
@@ -140,6 +157,11 @@ const ProductDetails = () => {
                         value={quantity}
                         onChange={handleQuantityChange}
                       />
+                    </Col>
+                    <Col sm={6}>
+                      <small className="text-muted">
+                        Máximo: {product.quantity} unidades
+                      </small>
                     </Col>
                   </Form.Group>
                   

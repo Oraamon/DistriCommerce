@@ -131,7 +131,7 @@ public class PaymentServiceImpl implements PaymentService {
             HttpEntity<String> entity = new HttpEntity<>(orderRequestJson, headers);
             
             // Enviar requisição para o serviço de pedidos
-            String orderServiceUrl = "http://order-service:8082/api/orders/simple";
+            String orderServiceUrl = "http://order-service:8082/api/orders";
             String response = restTemplate.postForObject(orderServiceUrl, entity, String.class);
             
             log.info("Pedido criado com sucesso: {}", response);
@@ -179,6 +179,47 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse getPaymentByOrderId(String orderId) {
         Payment payment = paymentRepository.findByOrderId(orderId);
         return payment != null ? mapToResponse(payment) : null;
+    }
+
+    @Override
+    public PaymentResponse refundPayment(String orderId) {
+        log.info("Processando reembolso para o pedido: {}", orderId);
+        
+        Payment payment = paymentRepository.findByOrderId(orderId);
+        if (payment == null) {
+            log.error("Pagamento não encontrado para o pedido: {}", orderId);
+            throw new RuntimeException("Pagamento não encontrado para o pedido: " + orderId);
+        }
+        
+        if (payment.getStatus() == PaymentStatus.APPROVED) {
+            payment.setStatus(PaymentStatus.REFUNDED);
+            payment.setUpdatedAt(LocalDateTime.now());
+            payment = paymentRepository.save(payment);
+            
+            log.info("Pagamento reembolsado com sucesso para o pedido: {}", orderId);
+            
+            PaymentResponse response = mapToResponse(payment);
+            
+            // Envia mensagem para o RabbitMQ
+            try {
+                log.info("Enviando evento de reembolso para o exchange: {}, routing key: {}", 
+                        RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
+                        RabbitMQConfig.PAYMENT_RESULT_ROUTING_KEY);
+                        
+                rabbitTemplate.convertAndSend(
+                        RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
+                        RabbitMQConfig.PAYMENT_RESULT_ROUTING_KEY, 
+                        response);
+            } catch (Exception e) {
+                log.error("Erro ao enviar evento de reembolso para o RabbitMQ: {}", e.getMessage());
+                // Continua o fluxo mesmo com erro no envio para o RabbitMQ
+            }
+            
+            return response;
+        } else {
+            log.error("Não é possível reembolsar um pagamento com status: {}", payment.getStatus());
+            throw new RuntimeException("Só é possível reembolsar pagamentos com status APPROVED. Status atual: " + payment.getStatus());
+        }
     }
 
     private PaymentResponse mapToResponse(Payment payment) {

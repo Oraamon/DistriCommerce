@@ -51,35 +51,64 @@ Este projeto de e-commerce é composto por múltiplos microserviços e um fronte
    cd Ecomerce
    ```
 
-2. Execute o Docker Compose:
+2. Utilize o script de inicialização:
    ```bash
+   ./start-services.sh
+   ```
+
+   Também é possível usar com opções:
+   ```bash
+   # Modo de desenvolvimento (com volumes mapeados)
+   ./start-services.sh --dev
+
+   # Modo de produção (otimizado)
+   ./start-services.sh --prod
+
+   # Reconstruir imagens
+   ./start-services.sh --rebuild
+
+   # Limpar ambiente antes de iniciar
+   ./start-services.sh --clean
+
+   # Combinações são possíveis
+   ./start-services.sh --dev --rebuild
+   ```
+
+   Alternativamente, execute o Docker Compose manualmente:
+   ```bash
+   # Modo de desenvolvimento
+   docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
+
+   # Modo de produção
    docker-compose up -d
    ```
 
    Este comando irá construir e iniciar todos os serviços:
-   - Frontend (http://localhost)
-   - Gateway API (http://localhost:8080)
+   - Frontend (http://localhost:3000)
+   - Gateway API (http://localhost:8090)
    - Eureka Server (http://localhost:8761)
-   - Serviço de Produtos
-   - Serviço de Pedidos
-   - Serviço de Pagamentos
-   - Serviço de Usuários
-   - Serviço de Recomendações
+   - Serviço de Produtos (http://localhost:8081)
+   - Serviço de Pedidos (http://localhost:8082)
+   - Serviço de Pagamentos (http://localhost:8083)
+   - Serviço de Usuários (http://localhost:8084)
+   - Serviço de Recomendações (http://localhost:5001)
    - MongoDB
    - PostgreSQL
-   - RabbitMQ
+   - RabbitMQ (admin: http://localhost:15672)
+   - Prometheus (http://localhost:9090)
+   - Grafana (http://localhost:3001)
 
 3. Acesse o aplicativo no navegador:
    ```
-   http://localhost
+   http://localhost:3000
    ```
 
 ### Para ambiente de desenvolvimento
 
-Para executar o sistema em modo de desenvolvimento:
+O modo de desenvolvimento permite editar o código-fonte e ver as mudanças em tempo real, pois os diretórios são mapeados como volumes nos containers.
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+./start-services.sh --dev
 ```
 
 ### Serviços e portas
@@ -152,15 +181,52 @@ O serviço de recomendações é acessado via gRPC na porta 50051.
 
 Cada serviço também pode ser acessado diretamente:
 
-- API Gateway: http://localhost:8080
+- API Gateway: http://localhost:8090
 - Eureka Server: http://localhost:8761
 - Serviço de Produtos: http://localhost:8081
 - Serviço de Pedidos: http://localhost:8082
 - Serviço de Pagamentos: http://localhost:8083
 - Serviço de Usuários: http://localhost:8084
-- Serviço de Recomendações (gRPC): localhost:50051
+- Serviço de Recomendações (gRPC): localhost:50051, REST: http://localhost:5001
 - RabbitMQ Management: http://localhost:15672 (guest/guest)
 
 ## Monitoramento
 
-Todos os serviços expõem endpoints Actuator para monitoramento em `/actuator` 
+Todos os serviços expõem endpoints Actuator para monitoramento em `/actuator`
+
+## Melhorias Implementadas
+
+### Sistema de Gestão de Estoque
+
+O sistema foi aprimorado para garantir a correta atualização do estoque de produtos durante o fluxo de pedidos:
+
+1. **Múltiplos Endpoints para Atualização de Estoque**:
+   - `/api/products/{id}/stock` (PUT) - Endpoint principal
+   - `/api/products/{id}/decrease-stock` (POST) - Endpoint alternativo para diminuir estoque
+   - `/api/products/{id}/increase-stock` (POST) - Endpoint alternativo para aumentar estoque
+
+2. **Mecanismos de Fallback**:
+   - Se o endpoint principal falhar, o sistema tenta automaticamente usar os endpoints alternativos
+   - Logs detalhados para diagnóstico de problemas
+
+3. **Atualização de Estoque em Todos os Fluxos**:
+   - Atualização durante criação do pedido normal e simplificado
+   - Atualização durante processamento de pagamento
+   - Restauração de estoque em caso de cancelamento ou reembolso
+
+### Sistema de Pedidos
+
+Melhorias no sistema de pedidos:
+
+1. **Exibição Aprimorada**:
+   - Detalhes dos produtos nos pedidos, incluindo ID, nome e preço
+   - Total por item e total do pedido
+
+2. **Processos Robustos**:
+   - Suporte a diferentes formatos de IDs de produtos
+   - Validação para evitar atualização duplicada de estoque
+   - Mensagens de erro mais informativas
+
+3. **Recuperação de Erros**:
+   - Sistema continua funcionando mesmo quando alguns serviços estão indisponíveis
+   - Modo de demonstração local para testes sem backend 

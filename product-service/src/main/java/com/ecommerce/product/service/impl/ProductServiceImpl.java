@@ -6,10 +6,12 @@ import com.ecommerce.product.model.Product;
 import com.ecommerce.product.repository.ProductRepository;
 import com.ecommerce.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
@@ -109,6 +112,38 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteProduct(String id) {
         productRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public boolean decreaseStock(String productId, int quantity) {
+        log.info("Diminuindo estoque para o produto {} em {} unidades", productId, quantity);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+        
+        if (product.getQuantity() < quantity) {
+            log.warn("Estoque insuficiente para o produto {}: disponível {}, solicitado {}", 
+                    productId, product.getQuantity(), quantity);
+            return false;
+        }
+        
+        product.setQuantity(product.getQuantity() - quantity);
+        productRepository.save(product);
+        log.info("Estoque atualizado para o produto {}: novo estoque {}", productId, product.getQuantity());
+        return true;
+    }
+    
+    @Override
+    @Transactional
+    public boolean increaseStock(String productId, int quantity) {
+        log.info("Aumentando estoque para o produto {} em {} unidades", productId, quantity);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+        
+        product.setQuantity(product.getQuantity() + quantity);
+        productRepository.save(product);
+        log.info("Estoque atualizado para o produto {}: novo estoque {}", productId, product.getQuantity());
+        return true;
     }
 
     private ProductResponse mapToProductResponse(Product product) {

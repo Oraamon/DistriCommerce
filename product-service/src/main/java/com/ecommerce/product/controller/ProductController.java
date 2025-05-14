@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -65,5 +66,34 @@ public class ProductController {
     public ResponseEntity<Void> deleteProduct(@PathVariable String id) {
         productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/{id}/decrease-stock")
+    public ResponseEntity<Map<String, Object>> decreaseStock(
+            @PathVariable String id, 
+            @RequestParam int quantity) {
+        boolean success = productService.decreaseStock(id, quantity);
+        if (success) {
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Estoque diminuído com sucesso"
+            ));
+        } else {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Estoque insuficiente"
+            ));
+        }
+    }
+    
+    @PostMapping("/{id}/increase-stock")
+    public ResponseEntity<Map<String, Object>> increaseStock(
+            @PathVariable String id, 
+            @RequestParam int quantity) {
+        boolean success = productService.increaseStock(id, quantity);
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Estoque aumentado com sucesso"
+        ));
     }
 } 

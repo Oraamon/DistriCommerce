@@ -17,4 +17,9 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> processPayment(@RequestBody PaymentRequest request) {
         return ResponseEntity.ok(paymentService.processPayment(request));
     }
+    
+    @PostMapping("/refund/{orderId}")
+    public ResponseEntity<PaymentResponse> refundPayment(@PathVariable String orderId) {
+        return ResponseEntity.ok(paymentService.refundPayment(orderId));
+    }
 } 

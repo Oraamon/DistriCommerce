@@ -28,6 +28,11 @@ public class PaymentController {
         request.setOrderId(null);
         return ResponseEntity.ok(paymentService.processPayment(request));
     }
+    
+    @PostMapping("/refund/{orderId}")
+    public ResponseEntity<PaymentResponse> refundPayment(@PathVariable String orderId) {
+        return ResponseEntity.ok(paymentService.refundPayment(orderId));
+    }
 
     @GetMapping("/order/{orderId}")
     public ResponseEntity<PaymentResponse> getPaymentByOrderId(@PathVariable String orderId) {

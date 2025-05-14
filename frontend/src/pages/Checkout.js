@@ -139,18 +139,26 @@ const Checkout = () => {
         // Atualizar o header com a nova contagem do carrinho
         const event = new CustomEvent('cart-updated');
         window.dispatchEvent(event);
+        
+        // Em modo demo, atualizar estoque diretamente
+        try {
+          console.log('Atualizando estoque em modo demo...');
+          await PaymentService.updateProductStock(cartItems, 'decrease');
+          console.log('Estoque atualizado com sucesso em modo demo');
+        } catch (stockErr) {
+          console.error('Erro ao atualizar estoque em modo demo:', stockErr);
+        }
       } else {
         // Fluxo normal com API
         // Cria uma ordem no serviço de pedidos
         const orderResponse = await axios.post('/api/orders', {
-          shippingAddress,
+          userId: AuthService.getCurrentUser()?.id || "anonymous",
+          deliveryAddress: `${shippingAddress.street}, ${shippingAddress.number}, ${shippingAddress.complement}, ${shippingAddress.city} - ${shippingAddress.state}, ${shippingAddress.zipCode}`,
           items: cartItems.map(item => ({
-            productId: item.id,
-            quantity: item.quantity,
-            price: item.price
+            productId: item.productId || item.id,
+            quantity: item.quantity
           })),
-          shippingPrice: calculateShipping(),
-          totalPrice: parseFloat(calculateTotal())
+          paymentMethod: paymentMethod.toUpperCase()
         }, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -158,6 +166,7 @@ const Checkout = () => {
         });
         
         orderId = orderResponse.data.id;
+        console.log('Pedido criado com sucesso:', orderResponse.data);
       }
       
       // Sempre enviar para o RabbitMQ, mesmo em modo demo
@@ -173,24 +182,19 @@ const Checkout = () => {
             cardName: cardInfo.cardName,
             expiryDate: cardInfo.expiryDate,
             cvv: cardInfo.cvv
-          } : null
+          } : null,
+          // Incluir os itens para permitir que o serviço de pagamento atualize o estoque
+          orderItems: cartItems.map(item => ({
+            productId: item.productId || item.id,
+            quantity: item.quantity,
+            price: item.price
+          }))
         };
         
         console.log('Enviando solicitação de pagamento:', paymentRequest);
         
         // Enviar para o serviço de pagamento através do gateway
         const paymentResponse = await PaymentService.processPayment(paymentRequest);
-        
-        // Em modo demo, também atualizar estoque diretamente (fallback)
-        if (isDemo) {
-          try {
-            for (const item of cartItems) {
-              await axios.put(`/api/products/${item.id}/stock?quantity=-${item.quantity}`);
-            }
-          } catch (stockErr) {
-            console.error('Erro ao atualizar estoque em modo demo:', stockErr);
-          }
-        }
         
         console.log('Resposta do processamento de pagamento:', paymentResponse);
       } catch (paymentErr) {
