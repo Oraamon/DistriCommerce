@@ -12,8 +12,8 @@ import java.math.BigDecimal;
 @Table(name = "order_items")
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class OrderItem {
 
     @Id

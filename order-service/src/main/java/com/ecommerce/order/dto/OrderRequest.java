@@ -1,6 +1,6 @@
 package com.ecommerce.order.dto;
 
-import com.ecommerce.payment.model.PaymentMethod;
+import com.ecommerce.order.model.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -22,11 +22,11 @@ public class OrderRequest {
     private String userId;
     
     @NotBlank(message = "Endereço de entrega é obrigatório")
-    private String shippingAddress;
+    private String deliveryAddress;
     
     @NotEmpty(message = "Itens do pedido são obrigatórios")
     @Valid
-    private List<OrderItemRequest> orderItems;
+    private List<OrderItemRequest> items;
 
     @NotNull(message = "Método de pagamento é obrigatório")
     private PaymentMethod paymentMethod;

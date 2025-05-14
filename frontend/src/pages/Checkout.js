@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CartService from '../services/CartService';
 import AuthService from '../services/AuthService';
+import PaymentService from '../services/PaymentService';
 
 const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -164,22 +165,21 @@ const Checkout = () => {
         // Preparar o objeto de pagamento
         const paymentRequest = {
           orderId: orderId,
-          userId: AuthService.getCurrentUser()?.id || "demo-user",
+          userId: AuthService.getCurrentUser()?.id || "anonymous",
           amount: parseFloat(calculateTotal()),
-          paymentMethod: paymentMethod.toUpperCase()
+          paymentMethod: paymentMethod,
+          cardInfo: paymentMethod === 'credit_card' ? {
+            cardNumber: cardInfo.cardNumber,
+            cardName: cardInfo.cardName,
+            expiryDate: cardInfo.expiryDate,
+            cvv: cardInfo.cvv
+          } : null
         };
         
-        console.log('Enviando solicitação de pagamento para RabbitMQ:', paymentRequest);
+        console.log('Enviando solicitação de pagamento:', paymentRequest);
         
-        // Usar o mesmo endpoint para modo demo e modo normal
-        const paymentEndpoint = '/api/payments/process';
-        
-        const paymentResponse = await axios.post(paymentEndpoint, paymentRequest, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && {'Authorization': `Bearer ${token}`})
-          }
-        });
+        // Enviar para o serviço de pagamento através do gateway
+        const paymentResponse = await PaymentService.processPayment(paymentRequest);
         
         // Em modo demo, também atualizar estoque diretamente (fallback)
         if (isDemo) {
@@ -192,7 +192,7 @@ const Checkout = () => {
           }
         }
         
-        console.log('Resposta do processamento de pagamento:', paymentResponse.data);
+        console.log('Resposta do processamento de pagamento:', paymentResponse);
       } catch (paymentErr) {
         console.error('Erro ao solicitar processamento de pagamento:', paymentErr);
         // Não vamos tratar como erro fatal, apenas registrar

@@ -4,79 +4,37 @@ import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
-
-    public static final String PAYMENT_QUEUE = "payment.queue";
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
-    public static final String PAYMENT_ROUTING_KEY = "payment.routing.key";
-    
-    public static final String PAYMENT_RESULT_QUEUE = "payment.result.queue";
-    public static final String PAYMENT_RESULT_EXCHANGE = "payment.result.exchange";
-    public static final String PAYMENT_RESULT_ROUTING_KEY = "payment.result.routing.key";
-
-    public static final String PAYMENT_LOG_QUEUE = "payment.log.queue";
-    public static final String PAYMENT_LOG_EXCHANGE = "payment.log.exchange";
-    public static final String PAYMENT_LOG_ROUTING_KEY = "payment.log.routing.key";
+    public static final String PAYMENT_PROCESSED_QUEUE = "payment.processed.queue";
+    public static final String PAYMENT_PROCESSED_ROUTING_KEY = "payment.processed";
 
     @Bean
-    public Queue paymentQueue() {
-        return new Queue(PAYMENT_QUEUE, true);
+    public DirectExchange paymentExchange() {
+        return new DirectExchange(PAYMENT_EXCHANGE);
     }
 
     @Bean
-    public Queue paymentResultQueue() {
-        return new Queue(PAYMENT_RESULT_QUEUE, true);
+    public Queue paymentProcessedQueue() {
+        return new Queue(PAYMENT_PROCESSED_QUEUE);
     }
 
     @Bean
-    public Queue paymentLogQueue() {
-        return new Queue(PAYMENT_LOG_QUEUE, true);
+    public Binding paymentProcessedBinding() {
+        return BindingBuilder
+            .bind(paymentProcessedQueue())
+            .to(paymentExchange())
+            .with(PAYMENT_PROCESSED_ROUTING_KEY);
     }
 
     @Bean
-    public TopicExchange paymentExchange() {
-        return new TopicExchange(PAYMENT_EXCHANGE);
-    }
-
-    @Bean
-    public TopicExchange paymentResultExchange() {
-        return new TopicExchange(PAYMENT_RESULT_EXCHANGE);
-    }
-
-    @Bean
-    public TopicExchange paymentLogExchange() {
-        return new TopicExchange(PAYMENT_LOG_EXCHANGE);
-    }
-
-    @Bean
-    public Binding paymentBinding(Queue paymentQueue, TopicExchange paymentExchange) {
-        return BindingBuilder.bind(paymentQueue).to(paymentExchange).with(PAYMENT_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding paymentResultBinding(Queue paymentResultQueue, TopicExchange paymentResultExchange) {
-        return BindingBuilder.bind(paymentResultQueue).to(paymentResultExchange).with(PAYMENT_RESULT_ROUTING_KEY);
-    }
-
-    @Bean
-    public Binding paymentLogBinding(Queue paymentLogQueue, TopicExchange paymentLogExchange) {
-        return BindingBuilder.bind(paymentLogQueue).to(paymentLogExchange).with(PAYMENT_LOG_ROUTING_KEY);
-    }
-
-    @Bean
-    public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
-    }
-
-    @Bean
-    public AmqpTemplate amqpTemplate(ConnectionFactory connectionFactory) {
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(messageConverter());
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
         return rabbitTemplate;
     }
 } 

@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,6 +24,11 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
         return new ResponseEntity<>(orderService.createOrder(orderRequest), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/simple")
+    public ResponseEntity<OrderResponse> createSimpleOrder(@Valid @RequestBody OrderRequest orderRequest) {
+        return new ResponseEntity<>(orderService.createSimpleOrder(orderRequest), HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
@@ -52,5 +59,13 @@ public class OrderController {
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, String>> testEndpoint() {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "Order service is running");
+        return ResponseEntity.ok(response);
     }
 } 

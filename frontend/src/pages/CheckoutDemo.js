@@ -3,6 +3,7 @@ import { Alert, Badge, Button, Card, Col, Container, Form, ListGroup, Row, Spinn
 import { Link, useNavigate } from 'react-router-dom';
 import CartService from '../services/CartService';
 import axios from 'axios';
+import AuthService from '../services/AuthService';
 
 const CheckoutDemo = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -163,21 +164,23 @@ const CheckoutDemo = () => {
         console.error('Erro ao atualizar estoque em modo demo:', stockErr);
       }
       
+      // Obter ID do usuário atual ou usar fallback
+      const currentUser = AuthService.getCurrentUser();
+      const userId = currentUser?.id || "anonymous";
+      
       // Enviar informações de pagamento para processamento
       const paymentRequest = {
         orderId: parseInt(randomOrderNumber.toString()),
-        userId: "demo-user",
+        userId: userId,
         amount: parseFloat(calculateTotal()),
         paymentMethod: formData.paymentMethod.toUpperCase()
       };
       
       try {
-        // Use o endpoint de teste que sabemos que funciona via curl
-        await axios.post('/api/payments', paymentRequest, {
+        // Fazer a requisição diretamente para o serviço de pagamento através do proxy
+        await axios.post('/payments', paymentRequest, {
           headers: {
-            'Content-Type': 'application/json',
-            'X-Demo-Mode': 'true',
-            'Authorization': 'Bearer demo-token'
+            'Content-Type': 'application/json'
           }
         });
         

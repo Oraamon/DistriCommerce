@@ -1,96 +1,115 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Container, Alert } from 'react-bootstrap';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { Container, Card, Alert, Button, Spinner } from 'react-bootstrap';
+import { Link, useParams } from 'react-router-dom';
+import PaymentService from '../services/PaymentService';
 
 const OrderSuccess = () => {
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { orderId } = useParams();
-  const navigate = useNavigate();
-  
+  const [loading, setLoading] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    const fetchOrderDetails = async () => {
+    const checkPaymentStatus = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        const response = await axios.get(`/api/orders/${orderId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        setOrder(response.data);
-        setLoading(false);
+        setLoading(true);
+        // Usar route padronizada no backend para buscar pagamento por orderId
+        const payment = await PaymentService.checkPaymentStatus(`order/${orderId}`);
+        setPaymentStatus(payment);
       } catch (err) {
-        setError('Erro ao carregar os detalhes do pedido. Por favor, tente novamente.');
+        console.error('Erro ao verificar status do pagamento:', err);
+        setError('Não foi possível verificar o status do pagamento neste momento.');
+      } finally {
         setLoading(false);
       }
     };
-    
-    fetchOrderDetails();
-  }, [orderId, navigate]);
-  
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('pt-BR', options);
+
+    if (orderId) {
+      checkPaymentStatus();
+    }
+  }, [orderId]);
+
+  const getStatusBadge = () => {
+    if (!paymentStatus) return null;
+
+    let badgeClass = 'info';
+    let statusText = 'Processando';
+
+    switch (paymentStatus.status?.toUpperCase()) {
+      case 'APPROVED':
+        badgeClass = 'success';
+        statusText = 'Aprovado';
+        break;
+      case 'COMPLETED':
+        badgeClass = 'success';
+        statusText = 'Concluído';
+        break;
+      case 'REJECTED':
+        badgeClass = 'danger';
+        statusText = 'Rejeitado';
+        break;
+      case 'FAILED':
+        badgeClass = 'danger';
+        statusText = 'Falhou';
+        break;
+      case 'PENDING':
+        badgeClass = 'warning';
+        statusText = 'Pendente';
+        break;
+      default:
+        badgeClass = 'info';
+        statusText = 'Processando';
+    }
+
+    return <Alert variant={badgeClass}>Status do Pagamento: {statusText}</Alert>;
   };
-  
-  if (loading) return <p>Carregando detalhes do pedido...</p>;
-  if (error) return <p className="text-danger">{error}</p>;
-  
+
   return (
-    <Container className="py-5">
-      <Card className="text-center p-5 shadow-sm">
-        <Alert variant="success" className="mb-4">
-          <h1>Pedido Realizado com Sucesso!</h1>
-          <p className="lead">Obrigado pela sua compra</p>
-        </Alert>
-        
-        {order && (
-          <div className="text-start my-4">
-            <h4>Resumo do Pedido #{order.id}</h4>
-            <p><strong>Data:</strong> {formatDate(order.createdAt)}</p>
-            <p><strong>Total:</strong> R$ {order.totalPrice.toFixed(2)}</p>
-            <p>
-              <strong>Status:</strong>{' '}
-              <span className="badge bg-primary">{order.status}</span>
-            </p>
-            
-            <h5 className="mt-4">Informações de Entrega</h5>
-            <p>
-              {order.shippingAddress.street}, {order.shippingAddress.number}
-              {order.shippingAddress.complement && `, ${order.shippingAddress.complement}`}
-              <br />
-              {order.shippingAddress.city} - {order.shippingAddress.state}
-              <br />
-              CEP: {order.shippingAddress.zipCode}
-            </p>
-            
-            <h5 className="mt-4">Método de Pagamento</h5>
-            <p>
-              {order.payment?.method === 'credit_card' 
-                ? 'Cartão de Crédito' 
-                : order.payment?.method === 'boleto' 
-                  ? 'Boleto Bancário'
-                  : 'Pagamento processando'}
-            </p>
+    <Container className="my-5">
+      <Card className="p-4 text-center shadow">
+        <Card.Body>
+          <Card.Title as="h2" className="mb-4">Pedido Realizado com Sucesso!</Card.Title>
+          <Card.Text>
+            Seu pedido de número <strong>{orderId}</strong> foi registrado em nosso sistema.
+          </Card.Text>
+          
+          {loading ? (
+            <div className="text-center my-4">
+              <Spinner animation="border" />
+              <p className="mt-2">Verificando status do pagamento...</p>
+            </div>
+          ) : error ? (
+            <Alert variant="warning">{error}</Alert>
+          ) : (
+            <>
+              {getStatusBadge()}
+              
+              {paymentStatus && (
+                <div className="my-3 text-start">
+                  <p><strong>Método de Pagamento:</strong> {paymentStatus.paymentMethod}</p>
+                  {paymentStatus.transactionId && (
+                    <p><strong>ID da Transação:</strong> {paymentStatus.transactionId}</p>
+                  )}
+                  {paymentStatus.paymentDate && (
+                    <p><strong>Data do Pagamento:</strong> {new Date(paymentStatus.paymentDate).toLocaleString()}</p>
+                  )}
+                  {paymentStatus.amount && (
+                    <p><strong>Valor:</strong> R$ {parseFloat(paymentStatus.amount).toFixed(2)}</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          
+          <div className="mt-4">
+            <Link to="/orders">
+              <Button variant="primary" className="me-3">Ver Meus Pedidos</Button>
+            </Link>
+            <Link to="/">
+              <Button variant="outline-primary">Continuar Comprando</Button>
+            </Link>
           </div>
-        )}
-        
-        <div className="mt-4">
-          <Link to="/orders" className="btn btn-outline-primary me-3">
-            Ver Meus Pedidos
-          </Link>
-          <Link to="/" className="btn btn-primary">
-            Continuar Comprando
-          </Link>
-        </div>
+        </Card.Body>
       </Card>
     </Container>
   );

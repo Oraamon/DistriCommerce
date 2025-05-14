@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: ecommerce-backend
     ports:
-      - "${BACKEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-8091}:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME:-sa}
@@ -40,7 +40,7 @@ services:
       - WDS_SOCKET_PORT=0
       - WATCHPACK_POLLING=true
       - FAST_REFRESH=true
-      - REACT_APP_BACKEND_URL=http://gateway-service:8080
+      - REACT_APP_BACKEND_URL=http://gateway-service:8090
     depends_on:
       - gateway-service
     networks:
@@ -52,17 +52,26 @@ services:
     tty: true
 
   eureka-server:
-    build: ./eureka-server
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
     ports:
       - "8761:8761"
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   postgres:
     image: postgres:14-alpine
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_MULTIPLE_DATABASES: ecommerce_product,ecommerce_order,ecommerce_payment
     ports:
       - "5432:5432"
     volumes:
@@ -70,6 +79,12 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mongodb:
     image: mongo:5.0
@@ -84,65 +99,100 @@ services:
       - ecommerce-network
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   gateway-service:
-    build: ./gateway-service
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
     ports:
       - "8090:8080"
     depends_on:
       - eureka-server
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
       - ecommerce-network
 
   product-service:
-    build: ./product-service
+    build:
+      context: ./product-service
+      dockerfile: Dockerfile
     ports:
       - "8081:8081"
     depends_on:
       - eureka-server
       - mongodb
-    environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATA_MONGODB_HOST: mongodb
     networks:
       - ecommerce-network
 
   order-service:
-    build: ./order-service
+    container_name: order-service
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
     ports:
       - "8082:8082"
-    depends_on:
-      - eureka-server
-      - postgres
-      - product-service
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce
+      - SPRING_PROFILES_ACTIVE=docker
+    volumes:
+      - ./order-service/src:/workspace/app/order-service/src
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   payment-service:
-    build: ./payment-service
+    container_name: payment-service
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
     ports:
       - "8083:8083"
-    depends_on:
-      - eureka-server
-      - postgres
-      - rabbitmq
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_payment
-      SPRING_RABBITMQ_HOST: rabbitmq
+      - SPRING_PROFILES_ACTIVE=docker
+    volumes:
+      - ./payment-service/src:/workspace/app/payment-service/src
     networks:
       - ecommerce-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
   user-service:
     build: ./user-service
@@ -173,12 +223,11 @@ services:
       - ecommerce-network
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
     networks:
       - ecommerce-network
 

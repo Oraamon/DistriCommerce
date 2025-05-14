@@ -1,6 +1,6 @@
 package com.ecommerce.order.dto;
 
-import com.ecommerce.payment.model.PaymentMethod;
+import com.ecommerce.order.model.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

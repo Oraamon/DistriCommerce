@@ -1,8 +1,7 @@
 package com.ecommerce.order.dto;
 
 import com.ecommerce.order.model.OrderStatus;
-import com.ecommerce.order.model.PaymentStatus;
-import com.ecommerce.payment.model.PaymentMethod;
+import com.ecommerce.order.model.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,11 +19,11 @@ public class OrderResponse {
     private Long id;
     private String userId;
     private OrderStatus status;
-    private LocalDateTime orderDate;
+    private LocalDateTime createdAt;
     private BigDecimal totalAmount;
-    private List<OrderItemResponse> orderItems;
-    private String shippingAddress;
+    private List<OrderItemResponse> items;
+    private String deliveryAddress;
     private String trackingNumber;
-    private PaymentStatus paymentStatus;
+    private String paymentId;
     private PaymentMethod paymentMethod;
 } 

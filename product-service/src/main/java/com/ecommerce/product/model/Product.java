@@ -1,13 +1,20 @@
 package com.ecommerce.product.model;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Document(collection = "products")
 public class Product {
 
@@ -18,16 +25,9 @@ public class Product {
     private String name;
     private String description;
     private BigDecimal price;
-    private String imageUrl;
     private int quantity;
-
-    public Product() {}
-
-    public Product(String name, String description, BigDecimal price, String imageUrl, int quantity) {
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.imageUrl = imageUrl;
-        this.quantity = quantity;
-    }
+    private List<String> categories;
+    private List<String> images;
+    private Double rating;
+    private Integer reviewCount;
 }

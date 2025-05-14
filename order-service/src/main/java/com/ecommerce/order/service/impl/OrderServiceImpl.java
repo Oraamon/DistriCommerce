@@ -5,7 +5,6 @@ import com.ecommerce.order.dto.*;
 import com.ecommerce.order.model.Order;
 import com.ecommerce.order.model.OrderItem;
 import com.ecommerce.order.model.OrderStatus;
-import com.ecommerce.order.model.PaymentStatus;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -37,17 +36,14 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse createOrder(OrderRequest orderRequest) {
         Order order = new Order();
         order.setUserId(orderRequest.getUserId());
-        order.setOrderDate(LocalDateTime.now());
+        order.setDeliveryAddress(orderRequest.getDeliveryAddress());
         order.setStatus(OrderStatus.PENDING);
-        order.setShippingAddress(orderRequest.getShippingAddress());
-        order.setPaymentStatus(PaymentStatus.PENDING);
         order.setPaymentMethod(orderRequest.getPaymentMethod());
-        order.setUpdatedAt(LocalDateTime.now());
 
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for (OrderItemRequest itemRequest : orderRequest.getOrderItems()) {
+        for (OrderItemRequest itemRequest : orderRequest.getItems()) {
             ProductDto product = productClient.getProduct(itemRequest.getProductId());
             
             OrderItem orderItem = new OrderItem();
@@ -62,7 +58,7 @@ public class OrderServiceImpl implements OrderService {
             totalAmount = totalAmount.add(orderItem.getSubtotal());
         }
 
-        order.setOrderItems(orderItems);
+        order.setItems(orderItems);
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
@@ -93,6 +89,50 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    public OrderResponse createSimpleOrder(OrderRequest orderRequest) {
+        log.info("Criando pedido simplificado para usuário: {}", orderRequest.getUserId());
+        
+        Order order = new Order();
+        order.setUserId(orderRequest.getUserId());
+        order.setDeliveryAddress(orderRequest.getDeliveryAddress());
+        order.setStatus(OrderStatus.PENDING);
+        order.setPaymentMethod(orderRequest.getPaymentMethod());
+
+        List<OrderItem> orderItems = new ArrayList<>();
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        // Para cada item, definimos um preço fixo simplificado
+        for (OrderItemRequest itemRequest : orderRequest.getItems()) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(order);
+            orderItem.setProductId(itemRequest.getProductId());
+            orderItem.setProductName("Produto " + itemRequest.getProductId()); // Nome genérico
+            orderItem.setQuantity(itemRequest.getQuantity());
+            
+            // Criamos um preço fictício para simplificar
+            BigDecimal unitPrice = new BigDecimal("99.99");
+            orderItem.setPrice(unitPrice);
+            orderItem.setSubtotal(unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+            
+            orderItems.add(orderItem);
+            totalAmount = totalAmount.add(orderItem.getSubtotal());
+        }
+
+        order.setItems(orderItems);
+        order.setTotalAmount(totalAmount);
+        
+        log.info("Salvando pedido simplificado com {} itens", orderItems.size());
+        Order savedOrder = orderRepository.save(order);
+        log.info("Pedido simplificado salvo com ID: {}", savedOrder.getId());
+
+        // Não atualizamos o estoque nem enviamos para processamento de pagamento
+        // para manter o processo simples e independente de outros serviços
+
+        return mapToOrderResponse(savedOrder);
+    }
+
+    @Override
     public OrderResponse getOrderById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
@@ -101,10 +141,24 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponse> getOrdersByUserId(String userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
-        return orders.stream()
-                .map(this::mapToOrderResponse)
-                .collect(Collectors.toList());
+        try {
+            log.info("Buscando pedidos para o usuário: {}", userId);
+            
+            if (userId == null || userId.isEmpty()) {
+                log.error("ID do usuário não informado");
+                throw new IllegalArgumentException("ID do usuário não pode ser nulo ou vazio");
+            }
+            
+            List<Order> orders = orderRepository.findByUserId(userId);
+            log.info("Encontrados {} pedidos para o usuário {}", orders.size(), userId);
+            
+            return orders.stream()
+                    .map(this::mapToOrderResponse)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Erro ao buscar pedidos para o usuário {}: {}", userId, e.getMessage());
+            throw new RuntimeException("Erro ao buscar pedidos para o usuário: " + userId, e);
+        }
     }
 
     @Override
@@ -114,7 +168,6 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
         
         order.setStatus(status);
-        order.setUpdatedAt(LocalDateTime.now());
         
         Order updatedOrder = orderRepository.save(order);
         return mapToOrderResponse(updatedOrder);
@@ -128,7 +181,6 @@ public class OrderServiceImpl implements OrderService {
         
         order.setTrackingNumber(trackingNumber);
         order.setStatus(OrderStatus.SHIPPED);
-        order.setUpdatedAt(LocalDateTime.now());
         
         Order updatedOrder = orderRepository.save(order);
         return mapToOrderResponse(updatedOrder);
@@ -141,7 +193,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
-        List<OrderItemResponse> orderItemResponses = order.getOrderItems().stream()
+        List<OrderItemResponse> orderItemResponses = order.getItems().stream()
                 .map(item -> OrderItemResponse.builder()
                         .id(item.getId())
                         .productId(item.getProductId())
@@ -156,12 +208,12 @@ public class OrderServiceImpl implements OrderService {
                 .id(order.getId())
                 .userId(order.getUserId())
                 .status(order.getStatus())
-                .orderDate(order.getOrderDate())
+                .createdAt(order.getCreatedAt())
                 .totalAmount(order.getTotalAmount())
-                .orderItems(orderItemResponses)
-                .shippingAddress(order.getShippingAddress())
+                .items(orderItemResponses)
+                .deliveryAddress(order.getDeliveryAddress())
                 .trackingNumber(order.getTrackingNumber())
-                .paymentStatus(order.getPaymentStatus())
+                .paymentId(order.getPaymentId())
                 .paymentMethod(order.getPaymentMethod())
                 .build();
     }

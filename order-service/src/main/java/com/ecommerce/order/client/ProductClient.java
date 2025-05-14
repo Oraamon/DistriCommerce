@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.math.BigDecimal;
+
 @FeignClient(name = "product-service")
 public interface ProductClient {
 
@@ -23,7 +25,7 @@ public interface ProductClient {
         return ProductDto.builder()
                 .id(id)
                 .name("Produto Temporariamente Indisponível")
-                .price(0.0)
+                .price(BigDecimal.ZERO)
                 .build();
     }
     

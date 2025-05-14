@@ -2,49 +2,83 @@ plugins {
     id 'org.springframework.boot' version '3.2.3'
     id 'io.spring.dependency-management' version '1.1.4'
     id 'java'
-    id 'org.siouan.frontend-jdk17' version '8.0.0'
 }
 
-group = 'com.example'
+group = 'br.com.pattern'
 version = '0.0.1-SNAPSHOT'
-
-java {
-    sourceCompatibility = '17'
-}
 
 repositories {
     mavenCentral()
 }
 
+ext {
+    set('springCloudVersion', "2023.0.0")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
-    runtimeOnly 'com.h2database:h2'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-devtools'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
 }
 
-frontend {
-    nodeVersion = '18.18.0'
-    assembleScript = 'run build'
-    cleanScript = 'run clean'
-    checkScript = 'run lint'
-    packageJsonDirectory = file("${projectDir}/frontend")
+bootJar {
+    enabled = true
+    mainClass = 'com.example.ecommerce.EcommerceApplication'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+allprojects {
+    repositories {
+        mavenCentral()
+    }
 }
 
-task copyFrontendBuildFiles(type: Copy) {
-    dependsOn 'assembleFrontend'
-    from "${projectDir}/frontend/build"
-    into "${projectDir}/src/main/resources/static"
-}
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
 
-tasks.named('bootJar') {
-    dependsOn 'copyFrontendBuildFiles'
+    group = 'br.com.pattern'
+    version = '0.0.1-SNAPSHOT'
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+        implementation 'org.springframework.boot:spring-boot-starter-amqp'
+        implementation 'org.springframework.boot:spring-boot-starter-actuator'
+        implementation 'org.postgresql:postgresql'
+        compileOnly 'org.projectlombok:lombok'
+        annotationProcessor 'org.projectlombok:lombok'
+    }
+
+    tasks.named('test') {
+        useJUnitPlatform()
+    }
+
+    bootJar {
+        enabled = false
+    }
+
+    jar {
+        enabled = false
+    }
 } 

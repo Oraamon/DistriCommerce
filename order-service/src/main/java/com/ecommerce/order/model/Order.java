@@ -1,6 +1,5 @@
 package com.ecommerce.order.model;
 
-import com.ecommerce.payment.model.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,8 +14,8 @@ import java.util.List;
 @Table(name = "orders")
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Order {
 
     @Id
@@ -25,25 +24,38 @@ public class Order {
 
     private String userId;
     
-    @Enumerated(EnumType.STRING)
-    private OrderStatus status;
+    private String deliveryAddress;
     
-    private LocalDateTime orderDate;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderItem> items;
     
     private BigDecimal totalAmount;
     
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> orderItems;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
     
-    private String shippingAddress;
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
     
-    private String trackingNumber;
+    private String paymentId;
+    
+    private LocalDateTime createdAt;
     
     private LocalDateTime updatedAt;
     
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
-
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod paymentMethod;
+    private String trackingNumber;
+    
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        if (this.status == null) {
+            this.status = OrderStatus.PENDING;
+        }
+    }
+    
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 } 

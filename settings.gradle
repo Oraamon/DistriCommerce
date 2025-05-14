@@ -1,1 +1,3 @@
-rootProject.name = 'ecommerce' 
+rootProject.name = 'ecommerce'
+include 'payment-service'
+include 'order-service' 

@@ -2,40 +2,45 @@ package com.ecommerce.payment.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "payments")
-@Data
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class Payment {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
-    private Long orderId;
-    
-    private String userId;
-    
+
+    @Column(nullable = false)
+    private String orderId;
+
+    @Column(nullable = false)
     private BigDecimal amount;
-    
+
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
-    
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod paymentMethod;
-    
-    private String transactionId;
-    
-    private LocalDateTime paymentDate;
-    
-    private String errorMessage;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 } 

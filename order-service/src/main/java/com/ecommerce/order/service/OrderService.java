@@ -19,4 +19,6 @@ public interface OrderService {
     OrderResponse updateTrackingInfo(Long id, String trackingNumber);
     
     void deleteOrder(Long id);
+    
+    OrderResponse createSimpleOrder(OrderRequest orderRequest);
 } 
