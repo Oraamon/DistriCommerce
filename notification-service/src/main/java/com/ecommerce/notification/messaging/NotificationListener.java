@@ -123,6 +123,57 @@ public class NotificationListener {
         }
     }
 
+    @RabbitListener(queues = PAYMENT_NOTIFICATION_QUEUE, containerFactory = "stringListenerContainerFactory")
+    public void handlePaymentResult(String paymentResultJson) {
+        try {
+            log.info("Recebido resultado de pagamento: {}", paymentResultJson);
+            
+            JsonNode paymentResult = objectMapper.readTree(paymentResultJson);
+            String status = paymentResult.get("status").asText();
+            String orderId = paymentResult.has("orderId") && !paymentResult.get("orderId").isNull() 
+                ? paymentResult.get("orderId").asText() : "N/A";
+            
+            String title;
+            String messageText;
+            NotificationType type = NotificationType.PAYMENT_STATUS;
+            
+            if ("APPROVED".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
+                title = "Pagamento Aprovado";
+                messageText = String.format("Seu pagamento foi aprovado com sucesso! Pedido: %s", orderId);
+            } else if ("FAILED".equalsIgnoreCase(status) || "REJECTED".equalsIgnoreCase(status)) {
+                title = "Pagamento Rejeitado";
+                messageText = String.format("Seu pagamento foi rejeitado. Pedido: %s. Tente novamente ou use outro método de pagamento.", orderId);
+            } else {
+                title = "Atualização de Pagamento";
+                messageText = String.format("Status do pagamento atualizado para: %s. Pedido: %s", status, orderId);
+            }
+            
+            Long userId = 1L;
+            if (paymentResult.has("userId") && !paymentResult.get("userId").isNull()) {
+                String userIdStr = paymentResult.get("userId").asText();
+                try {
+                    userId = Long.parseLong(userIdStr);
+                } catch (NumberFormatException e) {
+                    log.warn("Não foi possível converter userId para Long: {}, usando valor padrão", userIdStr);
+                }
+            }
+            
+            NotificationRequest request = NotificationRequest.builder()
+                    .userId(userId)
+                    .type(type)
+                    .title(title)
+                    .message(messageText)
+                    .data(paymentResultJson)
+                    .build();
+            
+            notificationService.createNotification(request);
+            log.info("Notificação de pagamento criada para usuário: {} - status: {}", userId, status);
+            
+        } catch (Exception e) {
+            log.error("Erro ao processar resultado de pagamento: {}", e.getMessage(), e);
+        }
+    }
+
     private String getOrderNotificationTitle(String action) {
         switch (action) {
             case "order_created":
@@ -145,8 +196,4 @@ public class NotificationListener {
                 return "Atualização do Pedido";
         }
     }
-    
-
-
-
 } 

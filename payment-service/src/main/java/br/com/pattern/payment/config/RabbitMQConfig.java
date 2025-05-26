@@ -19,6 +19,10 @@ public class RabbitMQConfig {
     public static final String PAYMENT_RESULT_EXCHANGE = "payment.exchange";
     public static final String PAYMENT_RESULT_QUEUE = "payment.result.queue";
     public static final String PAYMENT_RESULT_ROUTING_KEY = "payment.result.key";
+    
+    // Fila específica para notificações de pagamento
+    public static final String PAYMENT_NOTIFICATION_QUEUE = "payment.notification.queue";
+    public static final String PAYMENT_NOTIFICATION_ROUTING_KEY = "payment.notification.key";
 
     @Bean
     public DirectExchange paymentExchange() {
@@ -48,11 +52,25 @@ public class RabbitMQConfig {
                 .to(paymentExchange())
                 .with(PAYMENT_RESULT_ROUTING_KEY);
     }
+    
+    @Bean
+    public Queue paymentNotificationQueue() {
+        return new Queue(PAYMENT_NOTIFICATION_QUEUE);
+    }
+    
+    @Bean
+    public Binding paymentNotificationBinding() {
+        return BindingBuilder.bind(paymentNotificationQueue())
+                .to(paymentExchange())
+                .with(PAYMENT_NOTIFICATION_ROUTING_KEY);
+    }
 
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        converter.setCreateMessageIds(true);
+        rabbitTemplate.setMessageConverter(converter);
         return rabbitTemplate;
     }
 } 

@@ -100,14 +100,24 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentResponse response = mapToResponse(payment);
         
         try {
-            // Envia mensagem para o RabbitMQ usando a configuração correta
-            log.info("Enviando resultado do pagamento para o exchange: {}, routing key: {}", 
+            // Envia mensagem para o order-service
+            log.info("Enviando resultado do pagamento para o order-service - exchange: {}, routing key: {}", 
                     RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
                     RabbitMQConfig.PAYMENT_RESULT_ROUTING_KEY);
             
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
                     RabbitMQConfig.PAYMENT_RESULT_ROUTING_KEY, 
+                    response);
+                    
+            // Envia mensagem para o notification-service
+            log.info("Enviando notificação de pagamento - exchange: {}, routing key: {}", 
+                    RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
+                    RabbitMQConfig.PAYMENT_NOTIFICATION_ROUTING_KEY);
+            
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.PAYMENT_RESULT_EXCHANGE, 
+                    RabbitMQConfig.PAYMENT_NOTIFICATION_ROUTING_KEY, 
                     response);
         } catch (Exception e) {
             log.error("Erro ao enviar resultado do pagamento para o RabbitMQ: {}", e.getMessage());
@@ -241,6 +251,7 @@ public class PaymentServiceImpl implements PaymentService {
             response.setOrderId(null);
         }
         
+        response.setUserId(payment.getUserId());
         response.setAmount(payment.getAmount());
         response.setStatus(payment.getStatus().toString());
         response.setPaymentMethod(payment.getPaymentMethod());

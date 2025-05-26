@@ -1,0 +1,15 @@
+{
+  "name": "ecommerce-load-tests",
+  "version": "1.0.0",
+  "description": "Load tests for ecommerce microservices",
+  "scripts": {
+    "test:payment": "artillery run payment-load-test.yml",
+    "test:order": "artillery run order-load-test.yml",
+    "test:product": "artillery run product-load-test.yml",
+    "test:all": "npm run test:product && npm run test:payment && npm run test:order",
+    "test:stress": "artillery run stress-test.yml"
+  },
+  "devDependencies": {
+    "artillery": "^2.0.0"
+  }
+} 

@@ -1,0 +1,69 @@
+config:
+  target: 'http://localhost'
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 60
+      arrivalRate: 50
+      name: "Stress test"
+    - duration: 120
+      arrivalRate: 100
+      name: "High stress"
+    - duration: 60
+      arrivalRate: 200
+      name: "Peak stress"
+    - duration: 30
+      arrivalRate: 10
+      name: "Cool down"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Product Service Stress"
+    weight: 30
+    flow:
+      - get:
+          url: ":8081/api/products"
+      - think: 1
+      - get:
+          url: ":8081/api/products/1"
+
+  - name: "Payment Service Stress"
+    weight: 25
+    flow:
+      - post:
+          url: ":8083/api/payments"
+          json:
+            orderId: "{{ $randomInt(1000, 9999) }}"
+            amount: "{{ $randomInt(10, 500) }}.99"
+            paymentMethod: "CREDIT_CARD"
+            userId: "{{ $randomInt(1, 100) }}"
+      - think: 1
+
+  - name: "Order Service Stress"
+    weight: 25
+    flow:
+      - post:
+          url: ":8082/api/orders"
+          json:
+            userId: "{{ $randomInt(1, 100) }}"
+            deliveryAddress: "Test Address {{ $randomInt(1, 1000) }}"
+            paymentMethod: "CREDIT_CARD"
+            items:
+              - productId: "{{ $randomInt(1, 10) }}"
+                quantity: "{{ $randomInt(1, 5) }}"
+      - think: 2
+
+  - name: "Health Checks"
+    weight: 20
+    flow:
+      - get:
+          url: ":8081/actuator/health"
+      - get:
+          url: ":8082/actuator/health"
+      - get:
+          url: ":8083/actuator/health"
+      - get:
+          url: ":8086/actuator/health" 

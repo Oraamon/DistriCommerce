@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class PaymentResponse {
     private String paymentId;
     private Long orderId;
+    private String userId;
     private String status;
     private String transactionId;
     private String errorMessage;

@@ -256,7 +256,7 @@ const OrderDetails = () => {
                   <Row className="align-items-center">
                     <Col md={2}>
                       <img 
-                        src={item.product?.imageUrl || item.imageUrl || 'https://via.placeholder.com/80'}
+                        src={item.product?.images?.[0] || item.images?.[0] || 'https://via.placeholder.com/80'}
                         alt={item.productName || item.product?.name || item.name || 'Produto'}
                         className="img-fluid rounded"
                       />

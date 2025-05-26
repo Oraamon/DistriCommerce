@@ -1,184 +1,263 @@
 # E-commerce Microservices
 
-Sistema de E-commerce distribuído utilizando uma arquitetura de microserviços em Spring Boot e Python.
+Sistema de e-commerce distribuído usando arquitetura de microserviços com Spring Boot, RabbitMQ, PostgreSQL, MongoDB e monitoramento completo.
 
-## Arquitetura
+## 🏗️ Arquitetura
 
-O sistema é composto pelos seguintes serviços:
+### Microserviços
+- **Product Service** (8081) - Gerenciamento de produtos (MongoDB)
+- **Order Service** (8082) - Gerenciamento de pedidos (PostgreSQL)
+- **Payment Service** (8083) - Processamento de pagamentos (PostgreSQL)
+- **Notification Service** (8086) - Sistema de notificações (PostgreSQL)
+- **Eureka Server** (8761) - Service Discovery
 
-1. **API Gateway (Spring Cloud Gateway)**: Roteamento e balanceamento de carga
-2. **Serviço de Produtos (Spring Boot + MongoDB)**: CRUD de produtos, busca e catálogo
-3. **Serviço de Pedidos (Spring Boot + PostgreSQL)**: Processamento de pedidos e histórico
-4. **Serviço de Pagamentos (Spring Boot + RabbitMQ)**: Integração com gateways de pagamento (assíncrono)
-5. **Serviço de Carrinho (Spring Boot + PostgreSQL + RabbitMQ)**: Gerenciamento de carrinho de compras
-6. **Serviço de Usuários (Spring Boot + JWT)**: Autenticação e perfil do cliente
-7. **Serviço de Notificações (Spring Boot + RabbitMQ)**: Sistema de notificações
-8. **Serviço de Recomendações (gRPC + ML (Python))**: Sistema de recomendação em tempo real
-9. **Servidor Eureka**: Discovery Server para registro e descoberta de serviços
+### Infraestrutura
+- **PostgreSQL** (5432) - Banco de dados relacional
+- **MongoDB** (27017) - Banco de dados NoSQL
+- **RabbitMQ** (5672/15672) - Message Broker
+- **Prometheus** (9090) - Coleta de métricas
+- **Grafana** (3001) - Visualização de métricas
 
-## Tecnologias Utilizadas
-
-- **Spring Boot**: Framework para desenvolvimento de aplicações Java
-- **Spring Cloud Gateway**: API Gateway para roteamento de requisições
-- **Spring Cloud Netflix Eureka**: Descoberta de serviços
-- **Spring Data JPA/MongoDB**: Persistência de dados
-- **Spring Security + JWT**: Autenticação e autorização
-- **RabbitMQ**: Comunicação assíncrona entre serviços
-- **PostgreSQL**: Banco de dados relacional
-- **MongoDB**: Banco de dados NoSQL
-- **gRPC**: Framework para comunicação entre serviços
-- **Python/scikit-learn**: Algoritmos de machine learning para recomendações
-- **Prometheus**: Monitoramento e métricas
-- **Grafana**: Visualização de métricas
-
-## Requisitos
-
-- Docker e Docker Compose
-- JDK 17
-- Maven
-- Python 3.10 (para o serviço de recomendações)
-
-## Como executar o projeto
+## 🚀 Como Executar
 
 ### Pré-requisitos
+- Docker e Docker Compose
+- Java 17+
+- Maven 3.6+
+- Node.js (para testes de carga)
 
-- Docker e Docker Compose instalados
-- Git
+### Execução Local
+```bash
+# Clonar o repositório
+git clone <repository-url>
+cd Ecomerce
 
-### Passos para execução
+# Iniciar todos os serviços
+docker-compose up -d
 
-1. Clone o repositório:
-   ```bash
-   git clone [URL_DO_REPOSITÓRIO]
-   cd Ecomerce
-   ```
+# Aguardar serviços iniciarem (cerca de 2 minutos)
+# Verificar status
+docker-compose ps
+```
 
-2. Execute o script de inicialização:
-   ```bash
-   chmod +x start-services.sh
-   ./start-services.sh
-   ```
+### Portas dos Serviços
 
-   Ou execute diretamente com Docker Compose:
-   ```bash
-   docker-compose up --build
-   ```
-
-3. Aguarde todos os serviços iniciarem (pode levar alguns minutos)
-
-### Serviços e portas
-
-| Serviço               | Porta  | Descrição                                 |
+| Serviço               | Porta  | URL Health Check                          |
 |-----------------------|--------|-------------------------------------------|
-| Frontend              | 3000   | Interface de usuário React                |
-| Backend Dev           | 8080   | Backend Spring Boot (desenvolvimento)    |
-| Gateway API           | 8090   | Spring Cloud Gateway                      |
-| Eureka Server         | 8761   | Registro e descoberta de serviços         |
-| Serviço de Produtos   | 8081   | Catálogo e gerenciamento de produtos      |
-| Serviço de Pedidos    | 8082   | Processamento e histórico de pedidos      |
-| Serviço de Pagamentos | 8083   | Processamento de pagamentos               |
-| Serviço de Carrinho   | 8084   | Gerenciamento de carrinho de compras      |
-| Serviço de Usuários   | 8085   | Autenticação e gerenciamento de usuários  |
-| Serviço de Notificações | 8086 | Sistema de notificações                   |
-| Serviço Recomendações | 50051  | Sistema de recomendação com gRPC          |
-| PostgreSQL            | 5432   | Banco de dados relacional                 |
-| MongoDB               | 27017  | Banco de dados NoSQL                      |
-| RabbitMQ              | 5672   | Mensageria (15672 para interface admin)   |
-| Prometheus            | 9090   | Monitoramento e métricas                  |
-| Grafana               | 3001   | Visualização de métricas                  |
+| Product Service       | 8081   | http://localhost:8081/actuator/health     |
+| Order Service         | 8082   | http://localhost:8082/actuator/health     |
+| Payment Service       | 8083   | http://localhost:8083/actuator/health     |
+| Cart Service          | 8084   | http://localhost:8084/actuator/health     |
+| User Service          | 8085   | http://localhost:8085/actuator/health     |
+| Notification Service  | 8086   | http://localhost:8086/actuator/health     |
+| Eureka Server         | 8761   | http://localhost:8761/actuator/health     |
+| Gateway Service       | 8090   | http://localhost:8090/actuator/health     |
+| PostgreSQL            | 5432   | -                                         |
+| MongoDB               | 27017  | -                                         |
+| RabbitMQ              | 5672   | http://localhost:15672 (Admin UI)        |
+| Prometheus            | 9090   | http://localhost:9090                     |
+| Grafana               | 3001   | http://localhost:3001 (admin/admin)      |
 
-### Parar os serviços
-
-Para parar todos os serviços:
-
+### Verificar Saúde dos Serviços
 ```bash
-docker-compose down
+curl http://localhost:8081/actuator/health  # Product Service
+curl http://localhost:8082/actuator/health  # Order Service
+curl http://localhost:8083/actuator/health  # Payment Service
+curl http://localhost:8086/actuator/health  # Notification Service
 ```
 
-Para parar e remover volumes (isso vai apagar todos os dados):
+## 📊 Monitoramento
 
+### Prometheus
+- **URL**: http://localhost:9090
+- **Métricas**: Coleta automática de métricas dos microserviços
+- **Targets**: Todos os serviços expostos via `/actuator/prometheus`
+
+### Grafana
+- **URL**: http://localhost:3001
+- **Login**: admin/admin
+- **Dashboard**: Microservices Monitoring (pré-configurado)
+- **Métricas disponíveis**:
+  - Requisições HTTP por segundo
+  - Tempos de resposta (percentis 50 e 95)
+  - Uso de memória JVM
+  - Conexões de banco de dados
+
+## 🔄 CI/CD
+
+### GitHub Actions
+O projeto inclui pipelines automatizados:
+
+#### CI Pipeline (`.github/workflows/ci.yml`)
+- **Trigger**: Push/PR para main/develop
+- **Etapas**:
+  - Testes unitários de todos os serviços
+  - Build das aplicações
+  - Build das imagens Docker
+  - Testes de integração
+
+#### CD Pipeline (`.github/workflows/cd.yml`)
+- **Trigger**: Após sucesso do CI
+- **Etapas**:
+  - Build e empacotamento
+  - Criação de artefatos Docker
+  - Deploy para staging
+  - Testes de smoke
+
+### Executar Localmente
 ```bash
-docker-compose down -v
+# Executar testes
+cd payment-service && mvn test
+cd ../order-service && mvn test
+cd ../notification-service && mvn test
+cd ../product-service && mvn test
+
+# Build completo
+docker-compose build
 ```
 
-## Endpoints Disponíveis
+## ☸️ Kubernetes (Minikube)
 
-### Produtos (via API Gateway)
+### Configuração
+```bash
+# Configurar Minikube
+chmod +x scripts/setup-minikube.sh
+./scripts/setup-minikube.sh
+```
 
-- `GET /api/products` - Lista todos os produtos
-- `GET /api/products/{id}` - Obtém um produto por ID
-- `GET /api/products/search?query=...` - Busca produtos por nome
-- `GET /api/products/category/{category}` - Lista produtos por categoria
-- `POST /api/products` - Cria um novo produto
-- `PUT /api/products/{id}` - Atualiza um produto
-- `DELETE /api/products/{id}` - Remove um produto
+### Deploy Manual
+```bash
+# Criar namespace
+kubectl apply -f k8s/namespace.yml
 
-### Usuários (via API Gateway)
+# Deploy PostgreSQL
+kubectl apply -f k8s/postgres.yml
 
-- `POST /api/auth/register` - Cadastra um novo usuário
-- `POST /api/auth/login` - Autentica um usuário e retorna o token JWT
-- `GET /api/users/{id}` - Obtém dados de um usuário (requer autenticação)
-- `GET /api/users/{id}/addresses` - Lista endereços de um usuário (requer autenticação)
-- `POST /api/users/{id}/addresses` - Adiciona um endereço a um usuário (requer autenticação)
+# Deploy Payment Service
+kubectl apply -f k8s/payment-service.yml
 
-### Carrinho (via API Gateway)
+# Verificar pods
+kubectl get pods -n ecommerce
 
-- `GET /api/cart/{userId}` - Obtém carrinho do usuário (requer autenticação)
-- `POST /api/cart/{userId}/items` - Adiciona item ao carrinho (requer autenticação)
-- `PUT /api/cart/{userId}/items/{itemId}` - Atualiza quantidade do item (requer autenticação)
-- `DELETE /api/cart/{userId}/items/{itemId}` - Remove item do carrinho (requer autenticação)
-- `DELETE /api/cart/{userId}` - Limpa carrinho (requer autenticação)
+# Port-forward para acesso local
+kubectl port-forward -n ecommerce service/payment-service 8083:8083
+```
 
-### Pedidos (via API Gateway)
+### Recursos Kubernetes
+- **Namespace**: ecommerce
+- **Deployments**: Com health checks e resource limits
+- **Services**: ClusterIP para comunicação interna
+- **HPA**: Auto-scaling baseado em CPU/memória
+- **PVC**: Persistent volumes para bancos de dados
 
-- `POST /api/orders` - Cria um novo pedido (requer autenticação)
-- `GET /api/orders/{id}` - Obtém um pedido por ID (requer autenticação)
-- `GET /api/orders/user/{userId}` - Lista pedidos de um usuário (requer autenticação)
+## 🧪 Testes de Carga
 
-### Pagamentos (via API Gateway)
+### Configuração
+```bash
+# Instalar Artillery
+cd load-tests
+npm install
+```
 
-- `POST /api/payments` - Processa um pagamento (requer autenticação)
-- `GET /api/payments/{id}` - Obtém dados de um pagamento (requer autenticação)
-- `POST /api/payments/{id}/refund` - Solicita reembolso de um pagamento (requer autenticação)
+### Executar Testes
+```bash
+# Script automatizado
+chmod +x scripts/run-load-tests.sh
+./scripts/run-load-tests.sh
 
-### Recomendações (via gRPC)
+# Ou manualmente
+cd load-tests
+npm run test:payment    # Teste do Payment Service
+npm run test:order      # Teste do Order Service
+npm run test:product    # Teste do Product Service
+npm run test:stress     # Teste de estresse
+```
 
-O serviço de recomendações é acessado via gRPC na porta 50051.
+### Tipos de Teste
+- **Carga Normal**: 5-20 req/s por 5-8 minutos
+- **Teste de Estresse**: Até 200 req/s com picos
+- **Cenários**: 
+  - Processamento de pagamentos
+  - Criação de pedidos
+  - Consulta de produtos
+  - Health checks
 
-## Acesso aos Serviços
+## 📈 Métricas e Alertas
 
-- **Frontend**: http://localhost:3000
-- **Backend Dev**: http://localhost:8080 (development mode)
-- **API Gateway**: http://localhost:8090
-- **Eureka Server**: http://localhost:8761
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3001
+### Métricas Principais
+- **Performance**: Latência, throughput, taxa de erro
+- **Recursos**: CPU, memória, conexões DB
+- **Negócio**: Pagamentos processados, pedidos criados
+- **Infraestrutura**: Status dos serviços, filas RabbitMQ
 
-## Monitoramento
+### Dashboards Grafana
+- **Microservices Overview**: Visão geral de todos os serviços
+- **JVM Metrics**: Métricas específicas da JVM
+- **Database Metrics**: Conexões e performance do banco
+- **RabbitMQ Metrics**: Filas e mensagens
 
-Todos os serviços Spring Boot expõem endpoints Actuator para monitoramento em `/actuator/health`
+## 🔧 Configuração de Desenvolvimento
 
-## Comunicação entre Serviços
+### Variáveis de Ambiente
+```bash
+# PostgreSQL
+POSTGRES_URL=jdbc:postgresql://localhost:5432/ecommerce
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
 
-- **Síncrona**: REST via API Gateway e Eureka para descoberta de serviços
-- **Assíncrona**: RabbitMQ para eventos entre serviços (pagamentos, notificações, carrinho)
-- **gRPC**: Serviço de recomendações para alta performance
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/ecommerce
 
-## Bancos de Dados
+# RabbitMQ
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_USER=admin
+RABBITMQ_PASSWORD=admin123
 
-- **PostgreSQL**: Usado pelos serviços de pedidos, pagamentos, carrinho, usuários e notificações
-- **MongoDB**: Usado pelo serviço de produtos e recomendações
+# Eureka
+EUREKA_URL=http://localhost:8761/eureka/
+```
 
-## Funcionalidades Implementadas
+### Profiles Spring
+- **default**: Desenvolvimento local
+- **docker**: Execução em containers
+- **k8s**: Execução no Kubernetes
 
-- ✅ Descoberta de serviços com Eureka
-- ✅ API Gateway com roteamento
-- ✅ Comunicação assíncrona com RabbitMQ
-- ✅ Persistência em PostgreSQL e MongoDB
-- ✅ Sistema de carrinho de compras
-- ✅ Processamento de pedidos
-- ✅ Sistema de pagamentos
-- ✅ Sistema de notificações
-- ✅ Monitoramento com Prometheus e Grafana
-- ✅ Health checks para todos os serviços 
+## 🐛 Troubleshooting
+
+### Problemas Comuns
+1. **Serviços não iniciam**: Verificar logs com `docker-compose logs <service>`
+2. **Notificações não funcionam**: Verificar configuração RabbitMQ
+3. **Métricas não aparecem**: Verificar endpoints `/actuator/prometheus`
+4. **Testes de carga falham**: Verificar se serviços estão rodando
+
+### Logs
+```bash
+# Ver logs de todos os serviços
+docker-compose logs -f
+
+# Ver logs de um serviço específico
+docker-compose logs -f payment-service
+
+# Ver logs do Kubernetes
+kubectl logs -f deployment/payment-service -n ecommerce
+```
+
+## 📚 Documentação Adicional
+
+- [Arquitetura de Microserviços](docs/architecture.md)
+- [Guia de Monitoramento](docs/monitoring.md)
+- [Configuração CI/CD](docs/cicd.md)
+- [Testes de Performance](docs/performance.md)
+
+## 🤝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes. 

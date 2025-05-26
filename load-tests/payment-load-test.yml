@@ -1,0 +1,50 @@
+config:
+  target: 'http://localhost:8083'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down"
+  payload:
+    path: "payment-data.csv"
+    fields:
+      - "orderId"
+      - "amount"
+      - "userId"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Payment Processing"
+    weight: 80
+    flow:
+      - post:
+          url: "/api/payments"
+          json:
+            orderId: "{{ orderId }}"
+            amount: "{{ amount }}"
+            paymentMethod: "CREDIT_CARD"
+            userId: "{{ userId }}"
+          capture:
+            - json: "$.id"
+              as: "paymentId"
+      - think: 2
+      - get:
+          url: "/api/payments/{{ paymentId }}"
+
+  - name: "Health Check"
+    weight: 20
+    flow:
+      - get:
+          url: "/actuator/health"
+      - get:
+          url: "/actuator/metrics" 
