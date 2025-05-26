@@ -15,6 +15,7 @@ public class RabbitMQConfig {
     public static final String ORDER_EXCHANGE = "order.exchange";
     public static final String PAYMENT_EXCHANGE = "payment.exchange";
     public static final String NOTIFICATION_EXCHANGE = "notification.exchange";
+    public static final String ORDER_NOTIFICATION_EXCHANGE = "order.notification.exchange";
     
     // Queues
     public static final String ORDER_QUEUE = "order.queue";
@@ -34,13 +35,18 @@ public class RabbitMQConfig {
     }
     
     @Bean
-    public TopicExchange paymentExchange() {
-        return new TopicExchange(PAYMENT_EXCHANGE);
+    public DirectExchange paymentExchange() {
+        return new DirectExchange(PAYMENT_EXCHANGE);
     }
     
     @Bean
     public TopicExchange notificationExchange() {
         return new TopicExchange(NOTIFICATION_EXCHANGE);
+    }
+    
+    @Bean
+    public DirectExchange orderNotificationExchange() {
+        return new DirectExchange(ORDER_NOTIFICATION_EXCHANGE);
     }
     
     @Bean
@@ -83,7 +89,7 @@ public class RabbitMQConfig {
     public Binding orderNotificationBinding() {
         return BindingBuilder
                 .bind(orderNotificationQueue())
-                .to(notificationExchange())
+                .to(orderNotificationExchange())
                 .with(ORDER_NOTIFICATION_ROUTING_KEY);
     }
     

@@ -39,8 +39,8 @@ public class RabbitMQConfig {
     }
     
     @Bean
-    public TopicExchange orderNotificationExchange() {
-        return new TopicExchange(ORDER_NOTIFICATION_EXCHANGE);
+    public DirectExchange orderNotificationExchange() {
+        return new DirectExchange(ORDER_NOTIFICATION_EXCHANGE);
     }
     
     @Bean

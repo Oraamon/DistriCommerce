@@ -16,9 +16,9 @@ public class RabbitMQConfig {
     public static final String PAYMENT_ROUTING_KEY = "payment.routing.key";
 
     // Filas e configurações para enviar resultados de pagamento
-    public static final String PAYMENT_RESULT_EXCHANGE = "payment.result.exchange";
+    public static final String PAYMENT_RESULT_EXCHANGE = "payment.exchange";
     public static final String PAYMENT_RESULT_QUEUE = "payment.result.queue";
-    public static final String PAYMENT_RESULT_ROUTING_KEY = "payment.result.routing.key";
+    public static final String PAYMENT_RESULT_ROUTING_KEY = "payment.result.key";
 
     @Bean
     public DirectExchange paymentExchange() {
@@ -38,11 +38,6 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public DirectExchange paymentResultExchange() {
-        return new DirectExchange(PAYMENT_RESULT_EXCHANGE);
-    }
-
-    @Bean
     public Queue paymentResultQueue() {
         return new Queue(PAYMENT_RESULT_QUEUE);
     }
@@ -50,7 +45,7 @@ public class RabbitMQConfig {
     @Bean
     public Binding paymentResultBinding() {
         return BindingBuilder.bind(paymentResultQueue())
-                .to(paymentResultExchange())
+                .to(paymentExchange())
                 .with(PAYMENT_RESULT_ROUTING_KEY);
     }
 

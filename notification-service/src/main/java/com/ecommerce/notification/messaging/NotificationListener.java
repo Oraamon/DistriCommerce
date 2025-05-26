@@ -137,6 +137,10 @@ public class NotificationListener {
                 return "Pedido Entregue";
             case "order_cancelled":
                 return "Pedido Cancelado";
+            case "payment_approved":
+                return "Pagamento Aprovado";
+            case "payment_failed":
+                return "Pagamento Rejeitado";
             default:
                 return "Atualização do Pedido";
         }
