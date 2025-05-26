@@ -60,16 +60,16 @@ def get_mock_products():
     """Retorna produtos fictícios para quando o banco de dados não está disponível"""
     logger.info("Retornando produtos fictícios")
     return [
-        {'id': '1', 'name': 'Smartphone Premium', 'price': 999.99, 'category': 'Eletrônicos'},
-        {'id': '2', 'name': 'Laptop Ultra', 'price': 1299.99, 'category': 'Computadores'},
-        {'id': '3', 'name': 'Fones de Ouvido Wireless', 'price': 199.99, 'category': 'Áudio'},
-        {'id': '4', 'name': 'Smartwatch', 'price': 249.99, 'category': 'Wearables'},
-        {'id': '5', 'name': 'Cafeteira Automática', 'price': 79.99, 'category': 'Eletrodomésticos'},
-        {'id': '6', 'name': 'Liquidificador', 'price': 49.99, 'category': 'Eletrodomésticos'},
-        {'id': '7', 'name': 'Tênis de Corrida', 'price': 129.99, 'category': 'Esportes'},
-        {'id': '8', 'name': 'Monitor 4K', 'price': 349.99, 'category': 'Computadores'},
-        {'id': '9', 'name': 'Câmera Digital', 'price': 449.99, 'category': 'Fotografia'},
-        {'id': '10', 'name': 'Teclado Mecânico', 'price': 89.99, 'category': 'Periféricos'}
+        {'id': '1', 'name': 'Smartphone Premium', 'price': 999.99, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=500&fit=crop']},
+        {'id': '2', 'name': 'Laptop Ultra', 'price': 1299.99, 'category': 'Computadores', 'images': ['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop']},
+        {'id': '3', 'name': 'Fones de Ouvido Wireless', 'price': 199.99, 'category': 'Áudio', 'images': ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop']},
+        {'id': '4', 'name': 'Smartwatch', 'price': 249.99, 'category': 'Wearables', 'images': ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&h=500&fit=crop']},
+        {'id': '5', 'name': 'Cafeteira Automática', 'price': 79.99, 'category': 'Eletrodomésticos', 'images': ['https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=500&h=500&fit=crop']},
+        {'id': '6', 'name': 'Liquidificador', 'price': 49.99, 'category': 'Eletrodomésticos', 'images': ['https://images.unsplash.com/photo-1584990347449-a2d4c2c044c9?w=500&h=500&fit=crop']},
+        {'id': '7', 'name': 'Tênis de Corrida', 'price': 129.99, 'category': 'Esportes', 'images': ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop']},
+        {'id': '8', 'name': 'Monitor 4K', 'price': 349.99, 'category': 'Computadores', 'images': ['https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&h=500&fit=crop']},
+        {'id': '9', 'name': 'Câmera Digital', 'price': 449.99, 'category': 'Fotografia', 'images': ['https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&h=500&fit=crop']},
+        {'id': '10', 'name': 'Teclado Mecânico', 'price': 89.99, 'category': 'Periféricos', 'images': ['https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=500&h=500&fit=crop']}
     ]
 
 @app.route('/api/recommendations/products/<product_id>', methods=['GET'])
@@ -99,7 +99,8 @@ def get_product_recommendations(product_id):
                 'name': product.get('name', 'Produto'),
                 'price': float(product.get('price', 0)),
                 'score': random.uniform(0.5, 1.0),  # Score aleatório entre 0.5 e 1.0
-                'category': product.get('category', '')
+                'category': product.get('category', ''),
+                'images': product.get('images', ['https://via.placeholder.com/300x200'])
             })
         
         logger.info(f"Retornando {len(formatted_recommendations)} recomendações")
@@ -108,10 +109,10 @@ def get_product_recommendations(product_id):
         logger.error(f"Erro ao gerar recomendações: {e}")
         # Em caso de erro, retorna produtos fictícios
         mock_recs = [
-            {'id': '2', 'name': 'Produto Recomendado 1', 'price': 99.99, 'score': 0.9, 'category': 'Eletrônicos'},
-            {'id': '3', 'name': 'Produto Recomendado 2', 'price': 149.99, 'score': 0.8, 'category': 'Eletrônicos'},
-            {'id': '4', 'name': 'Produto Recomendado 3', 'price': 199.99, 'score': 0.7, 'category': 'Eletrônicos'},
-            {'id': '5', 'name': 'Produto Recomendado 4', 'price': 249.99, 'score': 0.6, 'category': 'Eletrônicos'}
+            {'id': '2', 'name': 'Produto Recomendado 1', 'price': 99.99, 'score': 0.9, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=500&fit=crop']},
+            {'id': '3', 'name': 'Produto Recomendado 2', 'price': 149.99, 'score': 0.8, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop']},
+            {'id': '4', 'name': 'Produto Recomendado 3', 'price': 199.99, 'score': 0.7, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop']},
+            {'id': '5', 'name': 'Produto Recomendado 4', 'price': 249.99, 'score': 0.6, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&h=500&fit=crop']}
         ]
         return jsonify(mock_recs)
 
@@ -139,7 +140,8 @@ def get_user_recommendations():
                 'name': product.get('name', 'Produto'),
                 'price': float(product.get('price', 0)),
                 'score': random.uniform(0.5, 1.0),  # Score aleatório entre 0.5 e 1.0
-                'category': product.get('category', '')
+                'category': product.get('category', ''),
+                'images': product.get('images', ['https://via.placeholder.com/300x200'])
             })
         
         logger.info(f"Retornando {len(formatted_recommendations)} recomendações")
@@ -148,10 +150,10 @@ def get_user_recommendations():
         logger.error(f"Erro ao gerar recomendações: {e}")
         # Em caso de erro, retorna produtos fictícios
         mock_recs = [
-            {'id': '1', 'name': 'Produto Recomendado 1', 'price': 99.99, 'score': 0.9, 'category': 'Eletrônicos'},
-            {'id': '2', 'name': 'Produto Recomendado 2', 'price': 149.99, 'score': 0.8, 'category': 'Eletrônicos'},
-            {'id': '3', 'name': 'Produto Recomendado 3', 'price': 199.99, 'score': 0.7, 'category': 'Eletrônicos'},
-            {'id': '4', 'name': 'Produto Recomendado 4', 'price': 249.99, 'score': 0.6, 'category': 'Eletrônicos'}
+            {'id': '1', 'name': 'Produto Recomendado 1', 'price': 99.99, 'score': 0.9, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=500&fit=crop']},
+            {'id': '2', 'name': 'Produto Recomendado 2', 'price': 149.99, 'score': 0.8, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop']},
+            {'id': '3', 'name': 'Produto Recomendado 3', 'price': 199.99, 'score': 0.7, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop']},
+            {'id': '4', 'name': 'Produto Recomendado 4', 'price': 249.99, 'score': 0.6, 'category': 'Eletrônicos', 'images': ['https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&h=500&fit=crop']}
         ]
         return jsonify(mock_recs)
 

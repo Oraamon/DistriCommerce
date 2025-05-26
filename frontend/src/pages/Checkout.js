@@ -33,24 +33,26 @@ const Checkout = () => {
   useEffect(() => {
     const fetchCartItems = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+        const token = AuthService.getAuthToken();
+        if (!token || !AuthService.isAuthenticated()) {
           navigate('/login');
           return;
         }
         
         const response = await axios.get('/api/cart', {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'X-User-Id': AuthService.getCurrentUser()?.id
           }
         });
         
-        if (response.data.length === 0) {
+        const cartData = response.data.items || response.data;
+        if (!cartData || cartData.length === 0) {
           navigate('/cart');
           return;
         }
         
-        setCartItems(response.data);
+        setCartItems(cartData);
         setLoading(false);
       } catch (err) {
         setError('Erro ao carregar o carrinho. Por favor, tente novamente.');
@@ -167,6 +169,13 @@ const Checkout = () => {
         
         orderId = orderResponse.data.id;
         console.log('Pedido criado com sucesso:', orderResponse.data);
+        
+        // Limpar o carrinho após criar o pedido
+        await CartService.clearCart();
+        
+        // Atualizar o header com a nova contagem do carrinho
+        const event = new CustomEvent('cart-updated');
+        window.dispatchEvent(event);
       }
       
       // Sempre enviar para o RabbitMQ, mesmo em modo demo

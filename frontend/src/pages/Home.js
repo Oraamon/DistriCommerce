@@ -20,12 +20,9 @@ const Home = () => {
     // Verificar se o usuário está autenticado e é admin
     const user = AuthService.getCurrentUser();
     setIsAuthenticated(AuthService.isAuthenticated());
-    setIsAdmin(user && user.role === 'ADMIN');
+    setIsAdmin(user && (user.role === 'ADMIN' || (user.roles && user.roles.includes('ROLE_ADMIN'))));
     
-    console.log('Autenticado:', AuthService.isAuthenticated());
-    console.log('É admin:', user && user.role === 'ADMIN');
-    console.log('Token:', AuthService.getAuthToken());
-    console.log('Modo de demonstração:', CartService.isDemoMode());
+
     
     const fetchProducts = async () => {
       setLoading(true);
@@ -35,7 +32,7 @@ const Home = () => {
 
         let response;
         if (searchTerm) {
-          response = await axios.get(`/api/products/search?name=${searchTerm}`);
+          response = await axios.get(`/api/products/search?query=${searchTerm}`);
         } else {
           response = await axios.get('/api/products');
         }
@@ -54,16 +51,9 @@ const Home = () => {
   }, [location.search]);
 
   const handleAddToCart = async (product) => {
-    // No modo de demonstração, não precisamos de autenticação
-    const authenticated = AuthService.isAuthenticated();
-    const demoMode = CartService.isDemoMode();
-    
-    console.log('Tentativa de adicionar ao carrinho - Autenticado:', authenticated, 'Demo Mode:', demoMode);
-    
-    if (!authenticated && !demoMode) {
+    if (!AuthService.isAuthenticated()) {
       setToastMessage('Você precisa fazer login para adicionar produtos ao carrinho.');
       setShowToast(true);
-      // Redirecionar para a página de login após um breve atraso
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
@@ -71,19 +61,16 @@ const Home = () => {
     }
     
     try {
-      await CartService.addToCart(product.id, 1);
-      setToastMessage(`${product.name} adicionado ao carrinho!${demoMode ? ' (Modo de demonstração)' : ''}`);
+      await CartService.addItem(product, 1);
+      setToastMessage(`${product.name} adicionado ao carrinho!`);
       setShowToast(true);
       
-      // Atualizar o header com a nova contagem do carrinho
       const event = new CustomEvent('cart-updated');
       window.dispatchEvent(event);
     } catch (error) {
-      // Verificar se o erro é de autenticação
       if (error.message === 'Usuário não autenticado') {
         setToastMessage('Sessão expirada. Por favor, faça login novamente.');
         setShowToast(true);
-        // Redirecionar para a página de login após um breve atraso
         setTimeout(() => {
           window.location.href = '/login';
         }, 2000);
@@ -137,7 +124,7 @@ const Home = () => {
               <Card className="h-100 product-card">
                 <Card.Img 
                   variant="top" 
-                  src={product.imageUrl || 'https://via.placeholder.com/300x200'} 
+                  src={product.images[0] || 'https://via.placeholder.com/300x200'} 
                   alt={product.name}
                   className="product-image"
                 />

@@ -7,7 +7,11 @@ RUN apk update && apk add --no-cache bash curl
 
 # Primeiro copiar apenas package.json e package-lock.json para aproveitar o cache do Docker
 COPY package*.json ./
-RUN npm install
+
+# Instalar dependências e garantir que date-fns seja instalado
+RUN npm install && \
+    npm install date-fns@latest --save && \
+    npm cache clean --force
 
 # Copiar todo o código-fonte do projeto
 COPY . .

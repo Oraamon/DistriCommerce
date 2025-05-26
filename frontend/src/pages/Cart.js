@@ -59,8 +59,9 @@ const Cart = () => {
   
   const handleRemoveItem = async (itemId) => {
     try {
-      await CartService.removeCartItem(itemId);
-      setCartItems(cartItems.filter(item => item.id !== itemId));
+      await CartService.removeItem(itemId);
+      // Atualizar apenas o item removido
+      setCartItems(prevItems => prevItems.filter(item => item.id !== itemId));
       
       // Atualizar o header com a nova contagem do carrinho
       const event = new CustomEvent('cart-updated');
@@ -84,9 +85,10 @@ const Cart = () => {
     }
     
     try {
-      await CartService.updateCartItem(itemId, newQuantity);
+      await CartService.updateItemQuantity(itemId, newQuantity);
       
-      setCartItems(cartItems.map(item => 
+      // Atualizar apenas o item modificado
+      setCartItems(prevItems => prevItems.map(item => 
         item.id === itemId ? { ...item, quantity: newQuantity } : item
       ));
       
@@ -156,11 +158,11 @@ const Cart = () => {
             <Col md={8}>
               <ListGroup variant="flush">
                 {cartItems.map(item => (
-                  <ListGroup.Item key={item.id}>
+                  <ListGroup.Item key={`${item.id}-${item.productId}`}>
                     <Row className="align-items-center">
                       <Col md={2}>
                         <img 
-                          src={item.imageUrl || 'https://via.placeholder.com/100'} 
+                          src={item.imageUrl || 'https://placehold.co/100x100'} 
                           alt={item.name}
                           className="img-fluid rounded"
                         />

@@ -10,9 +10,11 @@ O sistema é composto pelos seguintes serviços:
 2. **Serviço de Produtos (Spring Boot + MongoDB)**: CRUD de produtos, busca e catálogo
 3. **Serviço de Pedidos (Spring Boot + PostgreSQL)**: Processamento de pedidos e histórico
 4. **Serviço de Pagamentos (Spring Boot + RabbitMQ)**: Integração com gateways de pagamento (assíncrono)
-5. **Serviço de Usuários (Spring Boot + JWT)**: Autenticação e perfil do cliente
-6. **Serviço de Recomendações (gRPC + ML (Python))**: Sistema de recomendação em tempo real
-7. **Servidor Eureka**: Discovery Server para registro e descoberta de serviços
+5. **Serviço de Carrinho (Spring Boot + PostgreSQL + RabbitMQ)**: Gerenciamento de carrinho de compras
+6. **Serviço de Usuários (Spring Boot + JWT)**: Autenticação e perfil do cliente
+7. **Serviço de Notificações (Spring Boot + RabbitMQ)**: Sistema de notificações
+8. **Serviço de Recomendações (gRPC + ML (Python))**: Sistema de recomendação em tempo real
+9. **Servidor Eureka**: Discovery Server para registro e descoberta de serviços
 
 ## Tecnologias Utilizadas
 
@@ -26,17 +28,17 @@ O sistema é composto pelos seguintes serviços:
 - **MongoDB**: Banco de dados NoSQL
 - **gRPC**: Framework para comunicação entre serviços
 - **Python/scikit-learn**: Algoritmos de machine learning para recomendações
+- **Prometheus**: Monitoramento e métricas
+- **Grafana**: Visualização de métricas
 
 ## Requisitos
 
 - Docker e Docker Compose
 - JDK 17
-- Maven ou Gradle
+- Maven
 - Python 3.10 (para o serviço de recomendações)
 
-## Como executar o projeto completo
-
-Este projeto de e-commerce é composto por múltiplos microserviços e um frontend React.
+## Como executar o projeto
 
 ### Pré-requisitos
 
@@ -51,81 +53,39 @@ Este projeto de e-commerce é composto por múltiplos microserviços e um fronte
    cd Ecomerce
    ```
 
-2. Utilize o script de inicialização:
+2. Execute o script de inicialização:
    ```bash
+   chmod +x start-services.sh
    ./start-services.sh
    ```
 
-   Também é possível usar com opções:
+   Ou execute diretamente com Docker Compose:
    ```bash
-   # Modo de desenvolvimento (com volumes mapeados)
-   ./start-services.sh --dev
-
-   # Modo de produção (otimizado)
-   ./start-services.sh --prod
-
-   # Reconstruir imagens
-   ./start-services.sh --rebuild
-
-   # Limpar ambiente antes de iniciar
-   ./start-services.sh --clean
-
-   # Combinações são possíveis
-   ./start-services.sh --dev --rebuild
+   docker-compose up --build
    ```
 
-   Alternativamente, execute o Docker Compose manualmente:
-   ```bash
-   # Modo de desenvolvimento
-   docker-compose -f docker-compose.yml -f docker-compose.override.yml up -d
-
-   # Modo de produção
-   docker-compose up -d
-   ```
-
-   Este comando irá construir e iniciar todos os serviços:
-   - Frontend (http://localhost:3000)
-   - Gateway API (http://localhost:8090)
-   - Eureka Server (http://localhost:8761)
-   - Serviço de Produtos (http://localhost:8081)
-   - Serviço de Pedidos (http://localhost:8082)
-   - Serviço de Pagamentos (http://localhost:8083)
-   - Serviço de Usuários (http://localhost:8084)
-   - Serviço de Recomendações (http://localhost:5001)
-   - MongoDB
-   - PostgreSQL
-   - RabbitMQ (admin: http://localhost:15672)
-   - Prometheus (http://localhost:9090)
-   - Grafana (http://localhost:3001)
-
-3. Acesse o aplicativo no navegador:
-   ```
-   http://localhost:3000
-   ```
-
-### Para ambiente de desenvolvimento
-
-O modo de desenvolvimento permite editar o código-fonte e ver as mudanças em tempo real, pois os diretórios são mapeados como volumes nos containers.
-
-```bash
-./start-services.sh --dev
-```
+3. Aguarde todos os serviços iniciarem (pode levar alguns minutos)
 
 ### Serviços e portas
 
 | Serviço               | Porta  | Descrição                                 |
 |-----------------------|--------|-------------------------------------------|
-| Frontend              | 80     | Interface de usuário em React             |
-| Gateway API           | 8080   | Spring Cloud Gateway                      |
+| Frontend              | 3000   | Interface de usuário React                |
+| Backend Dev           | 8080   | Backend Spring Boot (desenvolvimento)    |
+| Gateway API           | 8090   | Spring Cloud Gateway                      |
 | Eureka Server         | 8761   | Registro e descoberta de serviços         |
 | Serviço de Produtos   | 8081   | Catálogo e gerenciamento de produtos      |
 | Serviço de Pedidos    | 8082   | Processamento e histórico de pedidos      |
 | Serviço de Pagamentos | 8083   | Processamento de pagamentos               |
-| Serviço de Usuários   | 8084   | Autenticação e gerenciamento de usuários  |
+| Serviço de Carrinho   | 8084   | Gerenciamento de carrinho de compras      |
+| Serviço de Usuários   | 8085   | Autenticação e gerenciamento de usuários  |
+| Serviço de Notificações | 8086 | Sistema de notificações                   |
 | Serviço Recomendações | 50051  | Sistema de recomendação com gRPC          |
 | PostgreSQL            | 5432   | Banco de dados relacional                 |
 | MongoDB               | 27017  | Banco de dados NoSQL                      |
 | RabbitMQ              | 5672   | Mensageria (15672 para interface admin)   |
+| Prometheus            | 9090   | Monitoramento e métricas                  |
+| Grafana               | 3001   | Visualização de métricas                  |
 
 ### Parar os serviços
 
@@ -161,6 +121,14 @@ docker-compose down -v
 - `GET /api/users/{id}/addresses` - Lista endereços de um usuário (requer autenticação)
 - `POST /api/users/{id}/addresses` - Adiciona um endereço a um usuário (requer autenticação)
 
+### Carrinho (via API Gateway)
+
+- `GET /api/cart/{userId}` - Obtém carrinho do usuário (requer autenticação)
+- `POST /api/cart/{userId}/items` - Adiciona item ao carrinho (requer autenticação)
+- `PUT /api/cart/{userId}/items/{itemId}` - Atualiza quantidade do item (requer autenticação)
+- `DELETE /api/cart/{userId}/items/{itemId}` - Remove item do carrinho (requer autenticação)
+- `DELETE /api/cart/{userId}` - Limpa carrinho (requer autenticação)
+
 ### Pedidos (via API Gateway)
 
 - `POST /api/orders` - Cria um novo pedido (requer autenticação)
@@ -177,56 +145,40 @@ docker-compose down -v
 
 O serviço de recomendações é acessado via gRPC na porta 50051.
 
-## Serviços Independentes
+## Acesso aos Serviços
 
-Cada serviço também pode ser acessado diretamente:
-
-- API Gateway: http://localhost:8090
-- Eureka Server: http://localhost:8761
-- Serviço de Produtos: http://localhost:8081
-- Serviço de Pedidos: http://localhost:8082
-- Serviço de Pagamentos: http://localhost:8083
-- Serviço de Usuários: http://localhost:8084
-- Serviço de Recomendações (gRPC): localhost:50051, REST: http://localhost:5001
-- RabbitMQ Management: http://localhost:15672 (guest/guest)
+- **Frontend**: http://localhost:3000
+- **Backend Dev**: http://localhost:8080 (development mode)
+- **API Gateway**: http://localhost:8090
+- **Eureka Server**: http://localhost:8761
+- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3001
 
 ## Monitoramento
 
-Todos os serviços expõem endpoints Actuator para monitoramento em `/actuator`
+Todos os serviços Spring Boot expõem endpoints Actuator para monitoramento em `/actuator/health`
 
-## Melhorias Implementadas
+## Comunicação entre Serviços
 
-### Sistema de Gestão de Estoque
+- **Síncrona**: REST via API Gateway e Eureka para descoberta de serviços
+- **Assíncrona**: RabbitMQ para eventos entre serviços (pagamentos, notificações, carrinho)
+- **gRPC**: Serviço de recomendações para alta performance
 
-O sistema foi aprimorado para garantir a correta atualização do estoque de produtos durante o fluxo de pedidos:
+## Bancos de Dados
 
-1. **Múltiplos Endpoints para Atualização de Estoque**:
-   - `/api/products/{id}/stock` (PUT) - Endpoint principal
-   - `/api/products/{id}/decrease-stock` (POST) - Endpoint alternativo para diminuir estoque
-   - `/api/products/{id}/increase-stock` (POST) - Endpoint alternativo para aumentar estoque
+- **PostgreSQL**: Usado pelos serviços de pedidos, pagamentos, carrinho, usuários e notificações
+- **MongoDB**: Usado pelo serviço de produtos e recomendações
 
-2. **Mecanismos de Fallback**:
-   - Se o endpoint principal falhar, o sistema tenta automaticamente usar os endpoints alternativos
-   - Logs detalhados para diagnóstico de problemas
+## Funcionalidades Implementadas
 
-3. **Atualização de Estoque em Todos os Fluxos**:
-   - Atualização durante criação do pedido normal e simplificado
-   - Atualização durante processamento de pagamento
-   - Restauração de estoque em caso de cancelamento ou reembolso
-
-### Sistema de Pedidos
-
-Melhorias no sistema de pedidos:
-
-1. **Exibição Aprimorada**:
-   - Detalhes dos produtos nos pedidos, incluindo ID, nome e preço
-   - Total por item e total do pedido
-
-2. **Processos Robustos**:
-   - Suporte a diferentes formatos de IDs de produtos
-   - Validação para evitar atualização duplicada de estoque
-   - Mensagens de erro mais informativas
-
-3. **Recuperação de Erros**:
-   - Sistema continua funcionando mesmo quando alguns serviços estão indisponíveis
-   - Modo de demonstração local para testes sem backend 
+- ✅ Descoberta de serviços com Eureka
+- ✅ API Gateway com roteamento
+- ✅ Comunicação assíncrona com RabbitMQ
+- ✅ Persistência em PostgreSQL e MongoDB
+- ✅ Sistema de carrinho de compras
+- ✅ Processamento de pedidos
+- ✅ Sistema de pagamentos
+- ✅ Sistema de notificações
+- ✅ Monitoramento com Prometheus e Grafana
+- ✅ Health checks para todos os serviços 

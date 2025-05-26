@@ -50,10 +50,16 @@ public class AuthServiceImpl implements AuthService {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
+        // Buscar informações completas do usuário
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
         return JwtResponse.builder()
                 .token(jwt)
                 .id(userDetails.getId())
                 .email(userDetails.getUsername())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
                 .roles(roles)
                 .build();
     }

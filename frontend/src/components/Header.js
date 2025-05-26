@@ -3,20 +3,16 @@ import { Navbar, Nav, Container, Form, Button, NavDropdown, Badge } from 'react-
 import { Link, useNavigate } from 'react-router-dom';
 import AuthService from '../services/AuthService';
 import CartService from '../services/CartService';
+import NotificationDropdown from './NotificationDropdown';
 
 const Header = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [cartItemCount, setCartItemCount] = useState(0);
-  const [demoMode, setDemoMode] = useState(false);
-
   useEffect(() => {
     const user = AuthService.getCurrentUser();
     const isAuthenticated = AuthService.isAuthenticated();
-    const isDemoMode = CartService.isDemoMode();
-    
-    setDemoMode(isDemoMode);
     
     if (user && isAuthenticated) {
       setCurrentUser(user);
@@ -35,7 +31,7 @@ const Header = () => {
 
   const fetchCartItemCount = async () => {
     try {
-      if (!AuthService.isAuthenticated() && !CartService.isDemoMode()) return;
+      if (!AuthService.isAuthenticated()) return;
 
       const count = await CartService.getCartItemCount();
       setCartItemCount(count);
@@ -58,19 +54,23 @@ const Header = () => {
     navigate('/login');
   };
 
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || (currentUser.roles && currentUser.roles.includes('ROLE_ADMIN')));
+
   return (
     <Navbar bg="primary" variant="dark" expand="lg">
       <Container>
         <Navbar.Brand as={Link} to="/">
           E-commerce
-          {demoMode && <Badge bg="warning" text="dark" className="ms-2" style={{fontSize: '0.6rem'}}>DEMO</Badge>}
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
             <Nav.Link as={Link} to="/">Página Inicial</Nav.Link>
-            {currentUser && currentUser.role === 'ADMIN' && (
-              <Nav.Link as={Link} to="/products/add">Adicionar Produto</Nav.Link>
+            {isAdmin && (
+              <>
+                <Nav.Link as={Link} to="/products/add">Adicionar Produto</Nav.Link>
+                <Nav.Link as={Link} to="/admin/orders">Gerenciar Pedidos</Nav.Link>
+              </>
             )}
           </Nav>
           <Form className="d-flex me-2" onSubmit={handleSearch}>
@@ -100,29 +100,25 @@ const Header = () => {
                   )}
                 </Nav.Link>
               </Nav>
+              
+              {/* Componente de Notificações */}
+              <NotificationDropdown />
+              
               <NavDropdown title={currentUser.name} id="basic-nav-dropdown">
                 <NavDropdown.Item as={Link} to="/profile">Meu Perfil</NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/orders">Meus Pedidos</NavDropdown.Item>
+                {isAdmin && (
+                  <>
+                    <NavDropdown.Divider />
+                    <NavDropdown.Item as={Link} to="/admin/orders">Administração</NavDropdown.Item>
+                  </>
+                )}
                 <NavDropdown.Divider />
                 <NavDropdown.Item onClick={handleLogout}>Sair</NavDropdown.Item>
               </NavDropdown>
             </>
           ) : (
             <Nav>
-              {demoMode && (
-                <Nav.Link as={Link} to="/cart" className="position-relative me-2">
-                  <i className="bi bi-cart"></i> Carrinho Demo
-                  {cartItemCount > 0 && (
-                    <Badge 
-                      pill 
-                      bg="danger" 
-                      className="position-absolute top-0 start-100 translate-middle"
-                    >
-                      {cartItemCount}
-                    </Badge>
-                  )}
-                </Nav.Link>
-              )}
               <Nav.Link as={Link} to="/login">Login</Nav.Link>
               <Nav.Link as={Link} to="/register">Registrar</Nav.Link>
             </Nav>

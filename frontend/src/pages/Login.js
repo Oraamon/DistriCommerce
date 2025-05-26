@@ -4,7 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthService from '../services/AuthService';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await AuthService.login(username, password);
+      await AuthService.login(email, password);
       
       navigate(from, { replace: true });
     } catch (err) {
@@ -43,14 +43,14 @@ const Login = () => {
                 </Alert>
               )}
               <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3" controlId="username">
-                  <Form.Label>Nome de usuário</Form.Label>
+                <Form.Group className="mb-3" controlId="email">
+                  <Form.Label>Email</Form.Label>
                   <Form.Control
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Digite seu nome de usuário"
+                    placeholder="Digite seu email"
                   />
                 </Form.Group>
 

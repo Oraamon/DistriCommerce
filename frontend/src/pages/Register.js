@@ -5,8 +5,8 @@ import AuthService from '../services/AuthService';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    username: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -35,8 +35,8 @@ const Register = () => {
 
     try {
       await AuthService.register(
-        formData.name,
-        formData.username,
+        formData.firstName,
+        formData.lastName,
         formData.email,
         formData.password
       );
@@ -59,27 +59,27 @@ const Register = () => {
             <Card.Body>
               {error && <Alert variant="danger">{error}</Alert>}
               <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3" controlId="name">
-                  <Form.Label>Nome Completo</Form.Label>
+                <Form.Group className="mb-3" controlId="firstName">
+                  <Form.Label>Primeiro Nome</Form.Label>
                   <Form.Control
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="firstName"
+                    value={formData.firstName}
                     onChange={handleChange}
                     required
-                    placeholder="Digite seu nome completo"
+                    placeholder="Digite seu primeiro nome"
                   />
                 </Form.Group>
 
-                <Form.Group className="mb-3" controlId="username">
-                  <Form.Label>Nome de Usuário</Form.Label>
+                <Form.Group className="mb-3" controlId="lastName">
+                  <Form.Label>Sobrenome</Form.Label>
                   <Form.Control
                     type="text"
-                    name="username"
-                    value={formData.username}
+                    name="lastName"
+                    value={formData.lastName}
                     onChange={handleChange}
                     required
-                    placeholder="Escolha um nome de usuário"
+                    placeholder="Digite seu sobrenome"
                   />
                 </Form.Group>
 

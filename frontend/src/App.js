@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -10,31 +10,17 @@ import Register from './pages/Register';
 import NotFound from './pages/NotFound';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
-import CheckoutDemo from './pages/CheckoutDemo';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderList from './pages/OrderList';
 import OrderDetails from './pages/OrderDetails';
 import UserProfile from './pages/UserProfile';
+import AdminOrderList from './pages/AdminOrderList';
+import AdminOrderDetails from './pages/AdminOrderDetails';
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute';
 import { Container } from 'react-bootstrap';
 
 function App() {
-  // Criar usuário de teste temporário se não houver um
-  useEffect(() => {
-    if (!localStorage.getItem('user') || !localStorage.getItem('auth_token')) {
-      const testUser = {
-        id: 'temp-user-1',
-        name: 'Usuário de Teste',
-        email: 'teste@example.com',
-        username: 'teste',
-        role: 'USER',
-        token: 'temp-token-123456789'
-      };
-      localStorage.setItem('user', JSON.stringify(testUser));
-      localStorage.setItem('auth_token', testUser.token);
-      console.log('Criado usuário de teste temporário:', testUser);
-    }
-  }, []);
 
   return (
     <Router>
@@ -45,7 +31,6 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/checkout-demo" element={<CheckoutDemo />} />
 
             <Route 
               path="/products/:id" 
@@ -58,17 +43,17 @@ function App() {
             <Route 
               path="/products/add" 
               element={
-                <PrivateRoute>
+                <AdminRoute>
                   <ProductForm />
-                </PrivateRoute>
+                </AdminRoute>
               } 
             />
             <Route 
               path="/products/edit/:id" 
               element={
-                <PrivateRoute>
+                <AdminRoute>
                   <ProductForm />
-                </PrivateRoute>
+                </AdminRoute>
               } 
             />
             
@@ -123,6 +108,25 @@ function App() {
                 <PrivateRoute>
                   <UserProfile />
                 </PrivateRoute>
+              } 
+            />
+            
+            {/* Rotas de Administrador */}
+            <Route 
+              path="/admin/orders" 
+              element={
+                <AdminRoute>
+                  <AdminOrderList />
+                </AdminRoute>
+              } 
+            />
+            
+            <Route 
+              path="/admin/orders/:orderId" 
+              element={
+                <AdminRoute>
+                  <AdminOrderDetails />
+                </AdminRoute>
               } 
             />
             

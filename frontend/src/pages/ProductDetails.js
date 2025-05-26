@@ -22,7 +22,7 @@ const ProductDetails = () => {
   useEffect(() => {
     const user = AuthService.getCurrentUser();
     setIsAuthenticated(!!user);
-    setIsAdmin(user?.role === 'ADMIN');
+    setIsAdmin(user && (user.role === 'ADMIN' || (user.roles && user.roles.includes('ROLE_ADMIN'))));
     
     const fetchProduct = async () => {
       try {
@@ -59,7 +59,7 @@ const ProductDetails = () => {
     }
     
     try {
-      await CartService.addToCart(product.id, quantity);
+      await CartService.addToCart(product.id, quantity, product.price);
       setToastMessage(`${quantity} unidade(s) de ${product.name} adicionado(s) ao carrinho!`);
       setShowToast(true);
       

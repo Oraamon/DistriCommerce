@@ -2,6 +2,7 @@ package com.ecommerce.product.service.impl;
 
 import com.ecommerce.product.dto.ProductRequest;
 import com.ecommerce.product.dto.ProductResponse;
+import com.ecommerce.product.exception.ProductNotFoundException;
 import com.ecommerce.product.model.Product;
 import com.ecommerce.product.repository.ProductRepository;
 import com.ecommerce.product.service.ProductService;
@@ -43,8 +44,13 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponse getProductById(String id) {
+        log.info("Buscando produto com ID: {}", id);
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + id));
+                .orElseThrow(() -> {
+                    log.error("Produto não encontrado com ID: {}", id);
+                    return new ProductNotFoundException("Produto não encontrado com ID: " + id);
+                });
+        log.info("Produto encontrado: {}", product.getName());
         return mapToProductResponse(product);
     }
 
@@ -83,7 +89,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<ProductResponse> getRelatedProducts(String productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Produto não encontrado com id: " + productId));
                 
         List<Product> relatedProducts = productRepository.findRelatedProducts(product.getCategories());
         return relatedProducts.stream()
@@ -96,7 +102,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductResponse updateProduct(String id, ProductRequest productRequest) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + id));
+                .orElseThrow(() -> new ProductNotFoundException("Produto não encontrado com id: " + id));
 
         product.setName(productRequest.getName());
         product.setDescription(productRequest.getDescription());
@@ -111,6 +117,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void deleteProduct(String id) {
+        if (!productRepository.existsById(id)) {
+            throw new ProductNotFoundException("Produto não encontrado com id: " + id);
+        }
         productRepository.deleteById(id);
     }
 
@@ -119,7 +128,7 @@ public class ProductServiceImpl implements ProductService {
     public boolean decreaseStock(String productId, int quantity) {
         log.info("Diminuindo estoque para o produto {} em {} unidades", productId, quantity);
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Produto não encontrado com id: " + productId));
         
         if (product.getQuantity() < quantity) {
             log.warn("Estoque insuficiente para o produto {}: disponível {}, solicitado {}", 
@@ -138,7 +147,7 @@ public class ProductServiceImpl implements ProductService {
     public boolean increaseStock(String productId, int quantity) {
         log.info("Aumentando estoque para o produto {} em {} unidades", productId, quantity);
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + productId));
+                .orElseThrow(() -> new ProductNotFoundException("Produto não encontrado com id: " + productId));
         
         product.setQuantity(product.getQuantity() + quantity);
         productRepository.save(product);

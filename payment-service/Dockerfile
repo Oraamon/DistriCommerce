@@ -1,42 +1,25 @@
-FROM gradle:8.5-jdk17 as build
+FROM maven:3.8.5-openjdk-17-slim as build
 WORKDIR /workspace/app
 
-# Copiar arquivos de configuração de compilação
-COPY settings.gradle .
-COPY build.gradle .
-COPY payment-service/build.gradle ./payment-service/
+COPY pom.xml .
+COPY src src
 
-# Descarregar dependências para aproveitar o cache
-RUN gradle dependencies --no-daemon
-
-# Copiar código fonte
-COPY payment-service/src ./payment-service/src
-
-# Verifique a estrutura do projeto
-RUN echo "Project structure:" && \
-    find . -type f | grep -v "build/" | sort
-
-# Construir o JAR
-RUN gradle :payment-service:bootJar --no-daemon
+RUN mvn package -DskipTests
+RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
 
 FROM openjdk:17-jdk-slim
-WORKDIR /app
+VOLUME /tmp
+ARG DEPENDENCY=/workspace/app/target/dependency
 
-# Instalar ferramentas para health check e diagnóstico
-RUN apt-get update && \
-    apt-get install -y wget curl && \
-    rm -rf /var/lib/apt/lists/*
+# Instalar ferramentas para health check
+RUN apt-get update && apt-get install -y wget && rm -rf /var/lib/apt/lists/*
 
-# Copiar o JAR construído
-COPY --from=build /workspace/app/payment-service/build/libs/*.jar app.jar
+COPY --from=build ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY --from=build ${DEPENDENCY}/META-INF /app/META-INF
+COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
+ENTRYPOINT ["java","-cp","app:app/lib/*","br.com.pattern.payment.PaymentServiceApplication"]
 
-# Configuração de JVM para desempenho em contêiner
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=70"
-
-EXPOSE 8083
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:8083/actuator/health || exit 1
 
-ENTRYPOINT exec java $JAVA_OPTS -jar app.jar 
+EXPOSE 8083 

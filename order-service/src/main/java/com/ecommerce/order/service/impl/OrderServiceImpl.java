@@ -7,6 +7,7 @@ import com.ecommerce.order.model.OrderItem;
 import com.ecommerce.order.model.OrderStatus;
 import com.ecommerce.order.repository.OrderRepository;
 import com.ecommerce.order.service.OrderService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
@@ -17,19 +18,29 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.ecommerce.order.config.RabbitMQConfig.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Service
-@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
     private final RabbitTemplate rabbitTemplate;
+    private final ObjectMapper objectMapper;
     private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
+
+    public OrderServiceImpl(OrderRepository orderRepository, ProductClient productClient, 
+                            RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+        this.orderRepository = orderRepository;
+        this.productClient = productClient;
+        this.rabbitTemplate = rabbitTemplate;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     @Transactional
@@ -191,14 +202,40 @@ public class OrderServiceImpl implements OrderService {
             }
             
             List<Order> orders = orderRepository.findByUserId(userId);
+            
+            if (orders == null) {
+                log.warn("Nenhum pedido encontrado para o usuário: {}", userId);
+                return new ArrayList<>();
+            }
+            
             log.info("Encontrados {} pedidos para o usuário {}", orders.size(), userId);
             
             return orders.stream()
                     .map(this::mapToOrderResponse)
                     .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            log.error("Erro de validação ao buscar pedidos para o usuário {}: {}", userId, e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Erro ao buscar pedidos para o usuário {}: {}", userId, e.getMessage());
-            throw new RuntimeException("Erro ao buscar pedidos para o usuário: " + userId, e);
+            log.error("Erro ao buscar pedidos para o usuário {}: {}", userId, e.getMessage(), e);
+            throw new RuntimeException("Erro ao buscar pedidos do usuário: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<OrderResponse> getAllOrders() {
+        try {
+            log.info("Buscando todos os pedidos");
+            
+            List<Order> orders = orderRepository.findAll();
+            log.info("Encontrados {} pedidos no total", orders.size());
+            
+            return orders.stream()
+                    .map(this::mapToOrderResponse)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Erro ao buscar todos os pedidos: {}", e.getMessage());
+            throw new RuntimeException("Erro ao buscar todos os pedidos", e);
         }
     }
 
@@ -208,10 +245,61 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
         
+        OrderStatus oldStatus = order.getStatus();
         order.setStatus(status);
         
         Order updatedOrder = orderRepository.save(order);
+        
+        // Enviar notificação sobre a mudança de status
+        try {
+            String eventType = getEventTypeForStatus(status);
+            
+            // Criar objeto para enviar via RabbitMQ
+            Map<String, Object> orderStatusEvent = new HashMap<>();
+            orderStatusEvent.put("eventType", eventType);
+            orderStatusEvent.put("orderId", updatedOrder.getId());
+            orderStatusEvent.put("userId", updatedOrder.getUserId());
+            orderStatusEvent.put("oldStatus", oldStatus.name());
+            orderStatusEvent.put("newStatus", status.name());
+            orderStatusEvent.put("timestamp", LocalDateTime.now().toString());
+            
+            // Converter para JSON
+            String orderStatusJson = objectMapper.writeValueAsString(orderStatusEvent);
+            
+            // Enviar para a fila de notificações
+            rabbitTemplate.convertAndSend(
+                NOTIFICATION_EXCHANGE, 
+                ORDER_NOTIFICATION_ROUTING_KEY, 
+                orderStatusJson
+            );
+            
+            log.info("Notificação de alteração de status enviada para o pedido: {}, de {} para {}", 
+                updatedOrder.getId(), oldStatus, status);
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de alteração de status: {}", e.getMessage());
+            // Não interrompe o fluxo em caso de erro no envio da notificação
+        }
+        
         return mapToOrderResponse(updatedOrder);
+    }
+    
+    private String getEventTypeForStatus(OrderStatus status) {
+        switch (status) {
+            case CONFIRMED:
+                return "ORDER_CONFIRMED";
+            case PROCESSING:
+                return "ORDER_PROCESSING";
+            case SHIPPED:
+                return "ORDER_SHIPPED";
+            case DELIVERED:
+                return "ORDER_DELIVERED";
+            case CANCELLED:
+                return "ORDER_CANCELLED";
+            case RETURNED:
+                return "ORDER_RETURNED";
+            default:
+                return "ORDER_STATUS_UPDATED";
+        }
     }
 
     @Override

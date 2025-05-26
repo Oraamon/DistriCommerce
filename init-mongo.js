@@ -13,7 +13,10 @@ db.products.insertMany([
         "price": 999.99,
         "quantity": 50,
         "categories": ["Electronics", "Mobile"],
-        "images": ["smartphone1.jpg", "smartphone2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&h=500&fit=crop"
+        ],
         "rating": 4.8,
         "reviewCount": 120
     },
@@ -24,7 +27,10 @@ db.products.insertMany([
         "price": 1299.99,
         "quantity": 30,
         "categories": ["Electronics", "Computers"],
-        "images": ["laptop1.jpg", "laptop2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 85
     },
@@ -35,7 +41,10 @@ db.products.insertMany([
         "price": 199.99,
         "quantity": 100,
         "categories": ["Electronics", "Audio"],
-        "images": ["headphones1.jpg", "headphones2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 200
     },
@@ -46,7 +55,10 @@ db.products.insertMany([
         "price": 249.99,
         "quantity": 40,
         "categories": ["Electronics", "Wearables"],
-        "images": ["smartwatch1.jpg", "smartwatch2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 150
     },
@@ -57,7 +69,10 @@ db.products.insertMany([
         "price": 79.99,
         "quantity": 25,
         "categories": ["Home", "Kitchen"],
-        "images": ["coffeemaker1.jpg", "coffeemaker2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1570088935863-4a0075d1c8f4?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1570088935863-4a0075d1c8f4?w=500&h=500&fit=crop"
+        ],
         "rating": 4.4,
         "reviewCount": 90
     },
@@ -68,7 +83,10 @@ db.products.insertMany([
         "price": 49.99,
         "quantity": 60,
         "categories": ["Home", "Kitchen"],
-        "images": ["blender1.jpg", "blender2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=500&h=500&fit=crop"
+        ],
         "rating": 4.3,
         "reviewCount": 75
     },
@@ -79,7 +97,10 @@ db.products.insertMany([
         "price": 29.99,
         "quantity": 80,
         "categories": ["Home", "Kitchen"],
-        "images": ["toaster1.jpg", "toaster2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1585232004428-244e0e6904e3?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1585232004428-244e0e6904e3?w=500&h=500&fit=crop"
+        ],
         "rating": 4.2,
         "reviewCount": 60
     },
@@ -90,7 +111,10 @@ db.products.insertMany([
         "price": 129.99,
         "quantity": 45,
         "categories": ["Sports", "Footwear"],
-        "images": ["shoes1.jpg", "shoes2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 180
     },
@@ -101,7 +125,10 @@ db.products.insertMany([
         "price": 39.99,
         "quantity": 70,
         "categories": ["Sports", "Fitness"],
-        "images": ["yogamat1.jpg", "yogamat2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1592432678016-e910b452f9a2?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1592432678016-e910b452f9a2?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 95
     },
@@ -112,7 +139,10 @@ db.products.insertMany([
         "price": 149.99,
         "quantity": 35,
         "categories": ["Sports", "Fitness"],
-        "images": ["dumbbell1.jpg", "dumbbell2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 110
     },
@@ -123,7 +153,10 @@ db.products.insertMany([
         "price": 799.99,
         "quantity": 25,
         "categories": ["Electronics", "TVs"],
-        "images": ["tv1.jpg", "tv2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=500&h=500&fit=crop"
+        ],
         "rating": 4.8,
         "reviewCount": 140
     },
@@ -134,7 +167,10 @@ db.products.insertMany([
         "price": 499.99,
         "quantity": 30,
         "categories": ["Electronics", "Gaming"],
-        "images": ["console1.jpg", "console2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1486401899868-0e435ed85128?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1486401899868-0e435ed85128?w=500&h=500&fit=crop"
+        ],
         "rating": 4.9,
         "reviewCount": 210
     },
@@ -145,7 +181,10 @@ db.products.insertMany([
         "price": 899.99,
         "quantity": 20,
         "categories": ["Electronics", "Photography"],
-        "images": ["camera1.jpg", "camera2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 95
     },
@@ -156,7 +195,10 @@ db.products.insertMany([
         "price": 399.99,
         "quantity": 40,
         "categories": ["Electronics", "Mobile"],
-        "images": ["tablet1.jpg", "tablet2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 110
     },
@@ -167,7 +209,10 @@ db.products.insertMany([
         "price": 349.99,
         "quantity": 35,
         "categories": ["Electronics", "Computers"],
-        "images": ["monitor1.jpg", "monitor2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&h=500&fit=crop"
+        ],
         "rating": 4.8,
         "reviewCount": 85
     },
@@ -178,7 +223,10 @@ db.products.insertMany([
         "price": 129.99,
         "quantity": 45,
         "categories": ["Electronics", "Computers"],
-        "images": ["keyboard1.jpg", "keyboard2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 65
     },
@@ -189,7 +237,10 @@ db.products.insertMany([
         "price": 79.99,
         "quantity": 60,
         "categories": ["Electronics", "Computers"],
-        "images": ["mouse1.jpg", "mouse2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 90
     },
@@ -200,7 +251,10 @@ db.products.insertMany([
         "price": 249.99,
         "quantity": 30,
         "categories": ["Home", "Office"],
-        "images": ["chair1.jpg", "chair2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1505843490538-5133c6c7d0e1?w=500&h=500&fit=crop"
+        ],
         "rating": 4.4,
         "reviewCount": 70
     },
@@ -211,7 +265,10 @@ db.products.insertMany([
         "price": 299.99,
         "quantity": 25,
         "categories": ["Electronics", "Photography"],
-        "images": ["drone1.jpg", "drone2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 55
     },
@@ -222,7 +279,10 @@ db.products.insertMany([
         "price": 89.99,
         "quantity": 50,
         "categories": ["Electronics", "Audio"],
-        "images": ["speaker1.jpg", "speaker2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 120
     },
@@ -233,7 +293,10 @@ db.products.insertMany([
         "price": 299.99,
         "quantity": 20,
         "categories": ["Home", "Appliances"],
-        "images": ["vacuum1.jpg", "vacuum2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1589003077984-894e133dabab?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1589003077984-894e133dabab?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 85
     },
@@ -244,7 +307,10 @@ db.products.insertMany([
         "price": 99.99,
         "quantity": 40,
         "categories": ["Home", "Kitchen"],
-        "images": ["airfryer1.jpg", "airfryer2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1585232004428-244e0e6904e3?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1585232004428-244e0e6904e3?w=500&h=500&fit=crop"
+        ],
         "rating": 4.8,
         "reviewCount": 150
     },
@@ -255,7 +321,10 @@ db.products.insertMany([
         "price": 59.99,
         "quantity": 65,
         "categories": ["Accessories", "Travel"],
-        "images": ["backpack1.jpg", "backpack2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 95
     },
@@ -266,7 +335,10 @@ db.products.insertMany([
         "price": 199.99,
         "quantity": 30,
         "categories": ["Fashion", "Accessories"],
-        "images": ["watch1.jpg", "watch2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 80
     },
@@ -277,7 +349,10 @@ db.products.insertMany([
         "price": 349.99,
         "quantity": 15,
         "categories": ["Sports", "Outdoor"],
-        "images": ["bike1.jpg", "bike2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=500&h=500&fit=crop"
+        ],
         "rating": 4.7,
         "reviewCount": 65
     },
@@ -288,7 +363,10 @@ db.products.insertMany([
         "price": 79.99,
         "quantity": 40,
         "categories": ["Tools", "Home"],
-        "images": ["toolkit1.jpg", "toolkit2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?w=500&h=500&fit=crop"
+        ],
         "rating": 4.5,
         "reviewCount": 75
     },
@@ -299,7 +377,10 @@ db.products.insertMany([
         "price": 119.99,
         "quantity": 50,
         "categories": ["Beauty", "Personal Care"],
-        "images": ["perfume1.jpg", "perfume2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500&h=500&fit=crop"
+        ],
         "rating": 4.8,
         "reviewCount": 110
     },
@@ -310,7 +391,10 @@ db.products.insertMany([
         "price": 149.99,
         "quantity": 25,
         "categories": ["Home", "Kitchen"],
-        "images": ["pans1.jpg", "pans2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1584990347449-a2d4c2c044c9?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1584990347449-a2d4c2c044c9?w=500&h=500&fit=crop"
+        ],
         "rating": 4.6,
         "reviewCount": 90
     },
@@ -321,7 +405,10 @@ db.products.insertMany([
         "price": 89.99,
         "quantity": 60,
         "categories": ["Fashion", "Accessories"],
-        "images": ["sunglasses1.jpg", "sunglasses2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1577803645773-f96470509666?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1577803645773-f96470509666?w=500&h=500&fit=crop"
+        ],
         "rating": 4.4,
         "reviewCount": 70
     },
@@ -332,7 +419,10 @@ db.products.insertMany([
         "price": 129.99,
         "quantity": 35,
         "categories": ["Home", "Appliances"],
-        "images": ["fan1.jpg", "fan2.jpg"],
+        "images": [
+            "https://images.unsplash.com/photo-1589003077984-894e133dabab?w=500&h=500&fit=crop",
+            "https://images.unsplash.com/photo-1589003077984-894e133dabab?w=500&h=500&fit=crop"
+        ],
         "rating": 4.3,
         "reviewCount": 60
     }

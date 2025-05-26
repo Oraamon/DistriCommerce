@@ -65,7 +65,7 @@ const ProductRecommendations = ({ title = "Recomendados para você", refreshInte
   
   const handleAddToCart = async (product) => {
     try {
-      await CartService.addToCart(product.id, 1);
+      await CartService.addToCart(product.id, 1, product.price);
       
       // Atualizar contagem do carrinho
       const event = new CustomEvent('cart-updated');
@@ -110,7 +110,7 @@ const ProductRecommendations = ({ title = "Recomendados para você", refreshInte
             <Card className="h-100 recommendation-card">
               <Card.Img 
                 variant="top" 
-                src={product.imageUrl || 'https://via.placeholder.com/300x200'} 
+                src={product.images[0] || 'https://via.placeholder.com/300x200'} 
                 alt={product.name}
                 style={{ height: '120px', objectFit: 'cover' }}
               />

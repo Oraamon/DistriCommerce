@@ -2,221 +2,182 @@ import api from './api';
 import AuthService from './AuthService';
 import axios from 'axios';
 
-// Carrinho local para modo de demonstração
-let demoCart = {
-  items: [],
-  count: 0
-};
-
 class CartService {
-  getAuthToken() {
-    const token = AuthService.getAuthToken();
-    console.log('Token from AuthService:', token);
-    return token;
-  }
-
-  // Verifica se estamos em modo de demonstração (sem backend funcional)
-  isDemoMode() {
-    return localStorage.getItem('demo_mode') === 'true';
-  }
-
-  // Ativa o modo de demonstração
-  enableDemoMode() {
-    localStorage.setItem('demo_mode', 'true');
-    console.log('Modo de demonstração ativado');
-  }
-
   async getCartItems() {
-    if (this.isDemoMode()) {
-      console.log('Usando carrinho em modo de demonstração');
-      return demoCart.items;
-    }
-
-    const token = this.getAuthToken();
-    if (!token) throw new Error('Usuário não autenticado');
-    
     try {
-      const response = await api.get('/cart');
-      return response.data;
+      if (!AuthService.isAuthenticated()) {
+        return [];
+      }
+      
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      const response = await axios.get('/api/cart', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id
+        }
+      });
+      
+      return response.data.items || [];
     } catch (error) {
       console.error('Erro ao obter itens do carrinho:', error);
-      
-      // Se receber 403, ativa o modo de demonstração
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return demoCart.items;
-      }
-      
-      throw error;
+      return [];
     }
   }
-  
-  async getCartItemCount() {
-    if (this.isDemoMode()) {
-      return demoCart.count;
-    }
 
-    const token = this.getAuthToken();
-    if (!token) return 0;
-    
+  async getCartItemCount() {
     try {
-      const response = await api.get('/cart/count');
-      return response.data.count;
-    } catch (error) {
-      console.error('Erro ao obter contagem do carrinho:', error);
+      const items = await this.getCartItems();
       
-      // Se receber 403, ativa o modo de demonstração
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return demoCart.count;
+      if (!items || items.length === 0) {
+        return 0;
       }
       
+      return items.reduce((total, item) => total + item.quantity, 0);
+    } catch (error) {
+      console.error('Erro ao obter contagem de itens do carrinho:', error);
       return 0;
     }
   }
-  
-  async addToCart(productId, quantity = 1) {
-    if (this.isDemoMode()) {
-      // Busca os detalhes do produto para adicionar ao carrinho de demonstração
-      try {
-        const response = await axios.get(`/api/products/${productId}`);
-        const product = response.data;
-        
-        // Verifica se o produto já existe no carrinho
-        const existingItem = demoCart.items.find(item => item.id === productId);
-        
-        if (existingItem) {
-          existingItem.quantity += quantity;
-        } else {
-          demoCart.items.push({
-            id: productId,
-            productId,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.imageUrl,
-            quantity
-          });
-        }
-        
-        demoCart.count += quantity;
-        console.log('Produto adicionado ao carrinho de demonstração:', demoCart);
-        
-        return { success: true, message: 'Produto adicionado ao carrinho (modo de demonstração)' };
-      } catch (error) {
-        console.error('Erro ao adicionar ao carrinho de demonstração:', error);
-        throw new Error('Erro ao adicionar produto ao carrinho de demonstração');
-      }
-    }
 
-    const token = this.getAuthToken();
-    if (!token) throw new Error('Usuário não autenticado');
-    
+  async addItem(product, quantity = 1) {
     try {
-      console.log('Enviando requisição para adicionar ao carrinho:', {
-        productId,
-        quantity,
-        headers: { Authorization: `Bearer ${token}` }
+      if (!AuthService.isAuthenticated()) {
+        throw new Error('Usuário não autenticado');
+      }
+      
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      const response = await axios.post('/api/cart/add', {
+        productId: product.id,
+        quantity: quantity,
+        price: product.price
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id
+        }
       });
       
-      // Usar diretamente axios para depuração
-      const response = await axios.post('/api/cart/items', 
-        { productId, quantity },
-        { 
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' 
-          } 
+      window.dispatchEvent(new Event('cart-updated'));
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao adicionar item ao carrinho:', error);
+      throw error;
+    }
+  }
+
+  async addToCart(productId, quantity = 1, price = null) {
+    try {
+      if (!AuthService.isAuthenticated()) {
+        throw new Error('Usuário não autenticado');
+      }
+      
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      
+      // Garantir que productId seja string
+      const stringProductId = productId.toString();
+      
+      // Se o preço não foi fornecido, buscar do produto
+      let productPrice = price;
+      if (!productPrice) {
+        try {
+          const productResponse = await axios.get(`/api/products/${stringProductId}`);
+          productPrice = productResponse.data.price;
+        } catch (err) {
+          console.error('Erro ao buscar preço do produto:', err);
+          throw new Error('Não foi possível obter o preço do produto');
         }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Erro detalhado ao adicionar ao carrinho:', error.response || error);
-      
-      // Se receber 403, ativa o modo de demonstração e tenta adicionar localmente
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return this.addToCart(productId, quantity);
       }
       
-      throw error;
-    }
-  }
-  
-  async updateCartItem(itemId, quantity) {
-    if (this.isDemoMode()) {
-      const item = demoCart.items.find(item => item.id === itemId);
-      if (item) {
-        const diff = quantity - item.quantity;
-        item.quantity = quantity;
-        demoCart.count += diff;
-        return { success: true };
-      }
-      throw new Error('Item não encontrado no carrinho de demonstração');
-    }
-
-    const token = this.getAuthToken();
-    if (!token) throw new Error('Usuário não autenticado');
-    
-    try {
-      const response = await api.put(`/cart/items/${itemId}`, { quantity });
+      const response = await axios.post('/api/cart/add', {
+        productId: stringProductId,
+        quantity: parseInt(quantity, 10),
+        price: parseFloat(productPrice)
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id
+        }
+      });
+      
+      window.dispatchEvent(new Event('cart-updated'));
       return response.data;
     } catch (error) {
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return this.updateCartItem(itemId, quantity);
-      }
+      console.error('Erro ao adicionar item ao carrinho:', error);
       throw error;
     }
   }
-  
-  async removeCartItem(itemId) {
-    if (this.isDemoMode()) {
-      const itemIndex = demoCart.items.findIndex(item => item.id === itemId);
-      if (itemIndex !== -1) {
-        const item = demoCart.items[itemIndex];
-        demoCart.count -= item.quantity;
-        demoCart.items.splice(itemIndex, 1);
-        return true;
-      }
-      return false;
-    }
 
-    const token = this.getAuthToken();
-    if (!token) throw new Error('Usuário não autenticado');
-    
+  async updateItemQuantity(productId, quantity) {
     try {
-      await api.delete(`/cart/items/${itemId}`);
-      return true;
-    } catch (error) {
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return this.removeCartItem(itemId);
+      if (!AuthService.isAuthenticated()) {
+        throw new Error('Usuário não autenticado');
       }
+      
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      
+      if (quantity <= 0) {
+        const response = await axios.delete(`/api/cart/${productId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-User-Id': user.id
+          }
+        });
+        
+        window.dispatchEvent(new Event('cart-updated'));
+        return response.data;
+      } else {
+        const response = await axios.put(`/api/cart/${productId}`, {
+          quantity: quantity
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-User-Id': user.id
+          }
+        });
+        
+        window.dispatchEvent(new Event('cart-updated'));
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar quantidade do item:', error);
       throw error;
     }
   }
-  
+
+  async removeItem(productId) {
+    return this.updateItemQuantity(productId, 0);
+  }
+
   async clearCart() {
-    if (this.isDemoMode()) {
-      demoCart = { items: [], count: 0 };
-      return true;
-    }
-
-    const token = this.getAuthToken();
-    if (!token) throw new Error('Usuário não autenticado');
-    
     try {
-      await api.delete('/cart');
-      return true;
-    } catch (error) {
-      if (error.response && (error.response.status === 403 || error.response.status === 401)) {
-        this.enableDemoMode();
-        return this.clearCart();
+      if (!AuthService.isAuthenticated()) {
+        throw new Error('Usuário não autenticado');
       }
+      
+      const token = AuthService.getAuthToken();
+      const user = AuthService.getCurrentUser();
+      const response = await axios.delete('/api/cart/clear', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-Id': user.id
+        }
+      });
+      
+      window.dispatchEvent(new Event('cart-updated'));
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao limpar carrinho:', error);
       throw error;
     }
+  }
+
+  isDemoMode() {
+    return false;
   }
 }
 
-const cartService = new CartService();
-export default cartService; 
+export default new CartService(); 

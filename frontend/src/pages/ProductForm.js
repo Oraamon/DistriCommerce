@@ -12,7 +12,8 @@ const ProductForm = () => {
     name: '',
     description: '',
     price: '',
-    imageUrl: '',
+    images: [''],
+    categories: [''],
     quantity: ''
   });
   
@@ -31,7 +32,8 @@ const ProductForm = () => {
             name: product.name,
             description: product.description || '',
             price: product.price.toString(),
-            imageUrl: product.imageUrl || '',
+            images: product.images && product.images.length > 0 ? product.images : [''],
+            categories: product.categories && product.categories.length > 0 ? product.categories : [''],
             quantity: product.quantity.toString()
           });
         } catch (err) {
@@ -54,6 +56,32 @@ const ProductForm = () => {
     });
   };
 
+  const handleArrayChange = (index, field, value) => {
+    const newArray = [...formData[field]];
+    newArray[index] = value;
+    setFormData({
+      ...formData,
+      [field]: newArray
+    });
+  };
+
+  const addArrayItem = (field) => {
+    setFormData({
+      ...formData,
+      [field]: [...formData[field], '']
+    });
+  };
+
+  const removeArrayItem = (index, field) => {
+    if (formData[field].length > 1) {
+      const newArray = formData[field].filter((_, i) => i !== index);
+      setFormData({
+        ...formData,
+        [field]: newArray
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = e.currentTarget;
@@ -70,9 +98,12 @@ const ProductForm = () => {
 
     try {
       const productData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity, 10)
+        quantity: parseInt(formData.quantity, 10),
+        images: formData.images.filter(img => img.trim() !== ''),
+        categories: formData.categories.filter(cat => cat.trim() !== '')
       };
 
       if (isEditMode) {
@@ -158,18 +189,66 @@ const ProductForm = () => {
               </Form.Control.Feedback>
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="productImageUrl">
-              <Form.Label>URL da Imagem</Form.Label>
-              <Form.Control
-                type="url"
-                name="imageUrl"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
-              <Form.Control.Feedback type="invalid">
-                Por favor, informe uma URL válida.
-              </Form.Control.Feedback>
+            <Form.Group className="mb-3" controlId="productImages">
+              <Form.Label>URLs das Imagens</Form.Label>
+              {formData.images.map((image, index) => (
+                <div key={index} className="d-flex mb-2">
+                  <Form.Control
+                    type="url"
+                    value={image}
+                    onChange={(e) => handleArrayChange(index, 'images', e.target.value)}
+                    placeholder="https://exemplo.com/imagem.jpg"
+                    className="me-2"
+                  />
+                  {formData.images.length > 1 && (
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => removeArrayItem(index, 'images')}
+                    >
+                      <i className="bi bi-trash"></i>
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button 
+                variant="outline-primary" 
+                size="sm"
+                onClick={() => addArrayItem('images')}
+              >
+                <i className="bi bi-plus"></i> Adicionar Imagem
+              </Button>
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="productCategories">
+              <Form.Label>Categorias</Form.Label>
+              {formData.categories.map((category, index) => (
+                <div key={index} className="d-flex mb-2">
+                  <Form.Control
+                    type="text"
+                    value={category}
+                    onChange={(e) => handleArrayChange(index, 'categories', e.target.value)}
+                    placeholder="Ex: Electronics, Gaming"
+                    className="me-2"
+                  />
+                  {formData.categories.length > 1 && (
+                    <Button 
+                      variant="outline-danger" 
+                      size="sm"
+                      onClick={() => removeArrayItem(index, 'categories')}
+                    >
+                      <i className="bi bi-trash"></i>
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button 
+                variant="outline-primary" 
+                size="sm"
+                onClick={() => addArrayItem('categories')}
+              >
+                <i className="bi bi-plus"></i> Adicionar Categoria
+              </Button>
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="productStock">
