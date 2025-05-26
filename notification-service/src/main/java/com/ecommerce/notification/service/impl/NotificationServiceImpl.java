@@ -34,6 +34,7 @@ public class NotificationServiceImpl implements NotificationService {
             Notification notification = Notification.builder()
                     .userId(request.getUserId())
                     .type(request.getType())
+                    .title(request.getTitle())
                     .message(request.getMessage())
                     .data(request.getData())
                     .build();
@@ -49,7 +50,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public List<NotificationResponse> getUserNotifications(String userId) {
+    public List<NotificationResponse> getUserNotifications(Long userId) {
         try {
             List<Notification> notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
             log.info("Recuperadas {} notificações para o usuário: {}", notifications.size(), userId);
@@ -64,7 +65,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public List<NotificationResponse> getUserUnreadNotifications(String userId) {
+    public List<NotificationResponse> getUserUnreadNotifications(Long userId) {
         try {
             List<Notification> notifications = notificationRepository.findByUserIdAndReadOrderByCreatedAtDesc(userId, false);
             log.info("Recuperadas {} notificações não lidas para o usuário: {}", notifications.size(), userId);
@@ -79,7 +80,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public long countUserUnreadNotifications(String userId) {
+    public long countUserUnreadNotifications(Long userId) {
         try {
             return notificationRepository.countByUserIdAndRead(userId, false);
         } catch (Exception e) {
@@ -108,7 +109,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void markAllNotificationsAsRead(String userId) {
+    public void markAllNotificationsAsRead(Long userId) {
         try {
             List<Notification> notifications = notificationRepository.findByUserIdAndReadOrderByCreatedAtDesc(userId, false);
             
@@ -125,13 +126,14 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendCartNotification(String userId, String action, String data) {
+    public void sendCartNotification(Long userId, String action, String data) {
         try {
             String message = createCartMessage(action);
             
             NotificationRequest request = NotificationRequest.builder()
                     .userId(userId)
                     .type(NotificationType.CART_UPDATE)
+                    .title("Atualização do Carrinho")
                     .message(message)
                     .data(data)
                     .build();
@@ -140,7 +142,7 @@ public class NotificationServiceImpl implements NotificationService {
             createNotification(request);
             
             // Enviar para a fila RabbitMQ
-            rabbitTemplate.convertAndSend(CART_EXCHANGE, CART_NOTIFICATION_ROUTING_KEY, request);
+            rabbitTemplate.convertAndSend(CART_NOTIFICATION_EXCHANGE, CART_NOTIFICATION_ROUTING_KEY, request);
             log.info("Notificação de carrinho enviada para o usuário: {}, ação: {}", userId, action);
         } catch (Exception e) {
             log.error("Erro ao enviar notificação de carrinho: {}", e.getMessage());
@@ -148,13 +150,14 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendOrderNotification(String userId, String action, String data) {
+    public void sendOrderNotification(Long userId, String action, String data) {
         try {
             String message = createOrderMessage(action);
             
             NotificationRequest request = NotificationRequest.builder()
                     .userId(userId)
                     .type(NotificationType.ORDER_STATUS)
+                    .title("Atualização do Pedido")
                     .message(message)
                     .data(data)
                     .build();
@@ -163,7 +166,7 @@ public class NotificationServiceImpl implements NotificationService {
             createNotification(request);
             
             // Enviar para a fila RabbitMQ
-            rabbitTemplate.convertAndSend(ORDER_EXCHANGE, ORDER_NOTIFICATION_ROUTING_KEY, request);
+            rabbitTemplate.convertAndSend(ORDER_NOTIFICATION_EXCHANGE, ORDER_NOTIFICATION_ROUTING_KEY, request);
             log.info("Notificação de pedido enviada para o usuário: {}, ação: {}", userId, action);
         } catch (Exception e) {
             log.error("Erro ao enviar notificação de pedido: {}", e.getMessage());
@@ -209,6 +212,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .id(notification.getId())
                 .userId(notification.getUserId())
                 .type(notification.getType())
+                .title(notification.getTitle())
                 .message(notification.getMessage())
                 .data(notification.getData())
                 .read(notification.isRead())

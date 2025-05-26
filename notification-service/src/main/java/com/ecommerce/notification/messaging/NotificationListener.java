@@ -40,6 +40,51 @@ public class NotificationListener {
         }
     }
 
+    @RabbitListener(queues = "cart.queue")
+    public void handleCartEvent(String cartEventJson) {
+        try {
+            log.info("Recebido evento de carrinho: {}", cartEventJson);
+            
+            JsonNode cartEvent = objectMapper.readTree(cartEventJson);
+            String action = cartEvent.get("action").asText();
+            Long userId = cartEvent.get("userId").asLong();
+            String productId = cartEvent.get("productId").asText();
+            int quantity = cartEvent.get("quantity").asInt();
+            
+            String title = "Atualização do Carrinho";
+            String message = createCartMessage(action, productId, quantity);
+            
+            NotificationRequest request = NotificationRequest.builder()
+                    .userId(userId)
+                    .type(NotificationType.CART_UPDATE)
+                    .title(title)
+                    .message(message)
+                    .data(cartEventJson)
+                    .build();
+            
+            notificationService.createNotification(request);
+            log.info("Notificação de carrinho criada para usuário: {} - ação: {}", userId, action);
+            
+        } catch (Exception e) {
+            log.error("Erro ao processar evento de carrinho: {}", e.getMessage());
+        }
+    }
+
+    private String createCartMessage(String action, String productId, int quantity) {
+        switch (action) {
+            case "item_added":
+                return String.format("Produto %s foi adicionado ao seu carrinho (quantidade: %d)", productId, quantity);
+            case "item_removed":
+                return String.format("Produto %s foi removido do seu carrinho", productId);
+            case "item_updated":
+                return String.format("Quantidade do produto %s foi atualizada para %d", productId, quantity);
+            case "cart_cleared":
+                return "Seu carrinho foi esvaziado";
+            default:
+                return "Seu carrinho foi atualizado";
+        }
+    }
+
     @RabbitListener(queues = ORDER_NOTIFICATION_QUEUE)
     public void handleOrderNotification(NotificationRequest request) {
         try {
@@ -49,130 +94,55 @@ public class NotificationListener {
             log.error("Erro ao processar notificação de pedido: {}", e.getMessage());
         }
     }
-    
-    // Ouvinte para mensagens de pedido
-    @RabbitListener(queues = "order.queue")
-    public void handleOrderEvent(String message) {
+
+    @RabbitListener(queues = "order.notification.queue")
+    public void handleOrderEvent(String orderEventJson) {
         try {
-            JsonNode jsonNode = objectMapper.readTree(message);
-            String eventType = jsonNode.get("eventType").asText();
-            String userId = jsonNode.get("userId").asText();
+            log.info("Recebido evento de pedido: {}", orderEventJson);
             
-            log.info("Recebido evento de pedido: {}, usuário: {}", eventType, userId);
+            JsonNode orderEvent = objectMapper.readTree(orderEventJson);
+            String action = orderEvent.get("action").asText();
+            Long userId = orderEvent.get("userId").asLong();
+            String message = orderEvent.get("message").asText();
             
-            String notificationMessage = "";
-            switch (eventType) {
-                case "ORDER_CREATED":
-                    notificationMessage = "Seu pedido foi criado com sucesso";
-                    break;
-                case "ORDER_CONFIRMED":
-                    notificationMessage = "Seu pedido foi confirmado";
-                    break;
-                case "ORDER_SHIPPED":
-                    notificationMessage = "Seu pedido foi enviado para entrega";
-                    break;
-                case "ORDER_DELIVERED":
-                    notificationMessage = "Seu pedido foi entregue";
-                    break;
-                case "ORDER_CANCELLED":
-                    notificationMessage = "Seu pedido foi cancelado";
-                    break;
-                default:
-                    notificationMessage = "O status do seu pedido foi atualizado";
-            }
+            String title = getOrderNotificationTitle(action);
             
             NotificationRequest request = NotificationRequest.builder()
                     .userId(userId)
                     .type(NotificationType.ORDER_STATUS)
-                    .message(notificationMessage)
-                    .data(message)
+                    .title(title)
+                    .message(message)
+                    .data(orderEventJson)
                     .build();
             
             notificationService.createNotification(request);
+            log.info("Notificação de pedido criada para usuário: {} - ação: {}", userId, action);
             
         } catch (Exception e) {
             log.error("Erro ao processar evento de pedido: {}", e.getMessage());
         }
     }
-    
-    // Ouvinte para mensagens de pagamento
-    @RabbitListener(queues = "payment.queue")
-    public void handlePaymentEvent(String message) {
-        try {
-            JsonNode jsonNode = objectMapper.readTree(message);
-            String eventType = jsonNode.get("eventType").asText();
-            String userId = jsonNode.get("userId").asText();
-            
-            log.info("Recebido evento de pagamento: {}, usuário: {}", eventType, userId);
-            
-            String notificationMessage = "";
-            switch (eventType) {
-                case "PAYMENT_RECEIVED":
-                    notificationMessage = "Seu pagamento foi recebido";
-                    break;
-                case "PAYMENT_CONFIRMED":
-                    notificationMessage = "Seu pagamento foi confirmado";
-                    break;
-                case "PAYMENT_FAILED":
-                    notificationMessage = "Seu pagamento falhou. Por favor, tente novamente";
-                    break;
-                default:
-                    notificationMessage = "O status do seu pagamento foi atualizado";
-            }
-            
-            NotificationRequest request = NotificationRequest.builder()
-                    .userId(userId)
-                    .type(NotificationType.PAYMENT_STATUS)
-                    .message(notificationMessage)
-                    .data(message)
-                    .build();
-            
-            notificationService.createNotification(request);
-            
-        } catch (Exception e) {
-            log.error("Erro ao processar evento de pagamento: {}", e.getMessage());
-        }
-    }
 
-    @RabbitListener(queues = "cart.queue")
-    public void handleCartEvent(String message) {
-        try {
-            JsonNode jsonNode = objectMapper.readTree(message);
-            String action = jsonNode.get("action").asText();
-            JsonNode data = jsonNode.get("data");
-            String userId = data.get("userId").asText();
-            
-            log.info("Recebido evento de carrinho: {}, usuário: {}", action, userId);
-            
-            String notificationMessage = "";
-            switch (action) {
-                case "ITEM_ADDED":
-                    notificationMessage = "Item adicionado ao carrinho";
-                    break;
-                case "ITEM_REMOVED":
-                    notificationMessage = "Item removido do carrinho";
-                    break;
-                case "ITEM_UPDATED":
-                    notificationMessage = "Quantidade do item atualizada";
-                    break;
-                case "CART_CLEARED":
-                    notificationMessage = "Carrinho esvaziado";
-                    break;
-                default:
-                    notificationMessage = "Seu carrinho foi atualizado";
-            }
-            
-            NotificationRequest request = NotificationRequest.builder()
-                    .userId(userId)
-                    .type(NotificationType.CART_UPDATE)
-                    .message(notificationMessage)
-                    .data(message)
-                    .build();
-            
-            notificationService.createNotification(request);
-            
-        } catch (Exception e) {
-            log.error("Erro ao processar evento de carrinho: {}", e.getMessage());
+    private String getOrderNotificationTitle(String action) {
+        switch (action) {
+            case "order_created":
+                return "Pedido Criado";
+            case "order_confirmed":
+                return "Pedido Confirmado";
+            case "order_processing":
+                return "Pedido em Processamento";
+            case "order_shipped":
+                return "Pedido Enviado";
+            case "order_delivered":
+                return "Pedido Entregue";
+            case "order_cancelled":
+                return "Pedido Cancelado";
+            default:
+                return "Atualização do Pedido";
         }
     }
+    
+
+
+
 } 

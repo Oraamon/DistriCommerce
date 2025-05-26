@@ -30,6 +30,10 @@ spring:
           uri: http://user-service:8085
           predicates:
             - Path=/api/users/**, /api/auth/**
+        - id: notification-service
+          uri: http://notification-service:8086
+          predicates:
+            - Path=/api/notifications/**
 
 eureka:
   client:

@@ -26,17 +26,17 @@ public class NotificationController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationResponse>> getUserNotifications(@PathVariable String userId) {
+    public ResponseEntity<List<NotificationResponse>> getUserNotifications(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationService.getUserNotifications(userId));
     }
 
     @GetMapping("/user/{userId}/unread")
-    public ResponseEntity<List<NotificationResponse>> getUserUnreadNotifications(@PathVariable String userId) {
+    public ResponseEntity<List<NotificationResponse>> getUserUnreadNotifications(@PathVariable Long userId) {
         return ResponseEntity.ok(notificationService.getUserUnreadNotifications(userId));
     }
 
     @GetMapping("/user/{userId}/count")
-    public ResponseEntity<Map<String, Long>> countUserUnreadNotifications(@PathVariable String userId) {
+    public ResponseEntity<Map<String, Long>> countUserUnreadNotifications(@PathVariable Long userId) {
         Map<String, Long> response = new HashMap<>();
         response.put("count", notificationService.countUserUnreadNotifications(userId));
         return ResponseEntity.ok(response);
@@ -48,14 +48,14 @@ public class NotificationController {
     }
 
     @PutMapping("/user/{userId}/read-all")
-    public ResponseEntity<Void> markAllNotificationsAsRead(@PathVariable String userId) {
+    public ResponseEntity<Void> markAllNotificationsAsRead(@PathVariable Long userId) {
         notificationService.markAllNotificationsAsRead(userId);
         return ResponseEntity.ok().build();
     }
     
     @PostMapping("/cart")
     public ResponseEntity<Void> sendCartNotification(@RequestBody Map<String, Object> requestBody) {
-        String userId = (String) requestBody.get("userId");
+        Long userId = Long.valueOf(requestBody.get("userId").toString());
         String action = (String) requestBody.get("action");
         String data = requestBody.get("data").toString();
         
@@ -65,7 +65,7 @@ public class NotificationController {
     
     @PostMapping("/order")
     public ResponseEntity<Void> sendOrderNotification(@RequestBody Map<String, Object> requestBody) {
-        String userId = (String) requestBody.get("userId");
+        Long userId = Long.valueOf(requestBody.get("userId").toString());
         String action = (String) requestBody.get("action");
         String data = requestBody.get("data").toString();
         

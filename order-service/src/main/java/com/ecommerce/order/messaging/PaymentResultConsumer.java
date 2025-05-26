@@ -9,9 +9,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -26,6 +31,7 @@ public class PaymentResultConsumer {
 
     private final OrderRepository orderRepository;
     private final ProductClient productClient;
+    private final RabbitTemplate rabbitTemplate;
     
     // Conjunto de status que indicam pagamento bem-sucedido
     private static final Set<String> SUCCESSFUL_PAYMENT_STATUSES = new HashSet<>(
@@ -80,10 +86,20 @@ public class PaymentResultConsumer {
                 order.setStatus(OrderStatus.CONFIRMED);
                 order.setPaymentId(paymentResponse.getPaymentId());
                 statusUpdated = true;
+                
+                // Enviar notificação de pagamento aprovado
+                sendPaymentNotification(order.getUserId(), "payment_approved", 
+                    String.format("Pagamento do pedido #%d foi aprovado! Seu pedido está sendo processado.", order.getId()));
+                    
             } else if (FAILED_PAYMENT_STATUSES.contains(paymentStatus.toUpperCase())) {
                 log.info("Atualizando pedido {} para status CANCELLED", order.getId());
                 order.setStatus(OrderStatus.CANCELLED);
                 statusUpdated = true;
+                
+                // Enviar notificação de pagamento rejeitado
+                sendPaymentNotification(order.getUserId(), "payment_failed", 
+                    String.format("Pagamento do pedido #%d foi rejeitado. Tente novamente ou use outro método de pagamento.", order.getId()));
+                    
             } else {
                 log.warn("Status de pagamento desconhecido: {}, mantendo status atual do pedido", paymentStatus);
             }
@@ -113,6 +129,26 @@ public class PaymentResultConsumer {
             log.info("Total de pedidos no sistema: {}", orderCount);
         } catch (Exception e) {
             log.error("Erro ao verificar fila: {}", e.getMessage());
+        }
+    }
+
+    private void sendPaymentNotification(String userId, String action, String message) {
+        try {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("userId", Long.valueOf(userId));
+            notification.put("action", action);
+            notification.put("message", message);
+            notification.put("timestamp", LocalDateTime.now().toString());
+
+            rabbitTemplate.convertAndSend(
+                "order.notification.exchange",
+                "order.notification.key",
+                notification
+            );
+
+            log.info("Notificação de pagamento enviada para usuário {}: {}", userId, action);
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de pagamento: {}", e.getMessage());
         }
     }
 }

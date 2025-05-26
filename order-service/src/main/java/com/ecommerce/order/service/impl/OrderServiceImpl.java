@@ -73,6 +73,12 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
+        log.info("Pedido criado com sucesso: {}", savedOrder.getId());
+
+        // Enviar notificação de pedido criado
+        sendOrderNotification(savedOrder.getUserId(), "order_created", 
+            String.format("Pedido #%d criado com sucesso! Total: R$ %.2f", 
+                savedOrder.getId(), savedOrder.getTotalAmount()));
 
         // Atualizar estoque dos produtos
         for (OrderItem item : orderItems) {
@@ -143,6 +149,11 @@ public class OrderServiceImpl implements OrderService {
         log.info("Salvando pedido simplificado com {} itens", orderItems.size());
         Order savedOrder = orderRepository.save(order);
         log.info("Pedido simplificado salvo com ID: {}", savedOrder.getId());
+
+        // Enviar notificação de pedido criado
+        sendOrderNotification(savedOrder.getUserId(), "order_created", 
+            String.format("Pedido #%d criado com sucesso! Total: R$ %.2f", 
+                savedOrder.getId(), savedOrder.getTotalAmount()));
 
         // Atualizar estoque dos produtos
         for (OrderItem item : orderItems) {
@@ -319,6 +330,26 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void deleteOrder(Long id) {
         orderRepository.deleteById(id);
+    }
+
+    private void sendOrderNotification(String userId, String action, String message) {
+        try {
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("userId", Long.valueOf(userId));
+            notification.put("action", action);
+            notification.put("message", message);
+            notification.put("timestamp", LocalDateTime.now().toString());
+
+            rabbitTemplate.convertAndSend(
+                "order.notification.exchange",
+                "order.notification.key",
+                notification
+            );
+
+            log.info("Notificação de pedido enviada para usuário {}: {}", userId, action);
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de pedido: {}", e.getMessage());
+        }
     }
 
     private OrderResponse mapToOrderResponse(Order order) {

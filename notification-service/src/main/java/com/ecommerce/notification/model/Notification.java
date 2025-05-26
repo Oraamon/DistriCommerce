@@ -21,11 +21,14 @@ public class Notification {
     private Long id;
     
     @Column(nullable = false)
-    private String userId;
+    private Long userId;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationType type;
+    
+    @Column(nullable = false)
+    private String title;
     
     @Column(nullable = false)
     private String message;
@@ -33,6 +36,7 @@ public class Notification {
     @Column(columnDefinition = "TEXT")
     private String data;
     
+    @Column(name = "read_status")
     private boolean read;
     
     @Column(nullable = false)

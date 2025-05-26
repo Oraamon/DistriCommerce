@@ -8,11 +8,11 @@ import java.util.List;
 
 public interface NotificationService {
     NotificationResponse createNotification(NotificationRequest request);
-    List<NotificationResponse> getUserNotifications(String userId);
-    List<NotificationResponse> getUserUnreadNotifications(String userId);
-    long countUserUnreadNotifications(String userId);
+    List<NotificationResponse> getUserNotifications(Long userId);
+    List<NotificationResponse> getUserUnreadNotifications(Long userId);
+    long countUserUnreadNotifications(Long userId);
     NotificationResponse markNotificationAsRead(Long id);
-    void markAllNotificationsAsRead(String userId);
-    void sendCartNotification(String userId, String action, String data);
-    void sendOrderNotification(String userId, String action, String data);
+    void markAllNotificationsAsRead(Long userId);
+    void sendCartNotification(Long userId, String action, String data);
+    void sendOrderNotification(Long userId, String action, String data);
 } 

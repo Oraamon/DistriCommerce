@@ -2,6 +2,8 @@
 CREATE DATABASE ecommerce;
 CREATE DATABASE ecommerce_payment;
 CREATE DATABASE ecommerce_user;
+CREATE DATABASE ecommerce_cart;
+CREATE DATABASE notification_db;
 
 -- Connect to ecommerce database
 \c ecommerce;
@@ -89,4 +91,40 @@ CREATE TABLE IF NOT EXISTS addresses (
 );
 
 -- Insert default roles
-INSERT INTO roles (name) VALUES ('ROLE_USER'), ('ROLE_ADMIN') ON CONFLICT DO NOTHING; 
+INSERT INTO roles (name) VALUES ('ROLE_USER'), ('ROLE_ADMIN') ON CONFLICT DO NOTHING;
+
+-- Connect to ecommerce_cart database
+\c ecommerce_cart;
+
+-- Create tables for cart service
+CREATE TABLE IF NOT EXISTS carts (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+    id SERIAL PRIMARY KEY,
+    cart_id BIGINT REFERENCES carts(id) ON DELETE CASCADE,
+    product_id VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL,
+    price DECIMAL(19, 2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+-- Connect to notification_db database
+\c notification_db;
+
+-- Create tables for notification service
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    read_status BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP
+); 

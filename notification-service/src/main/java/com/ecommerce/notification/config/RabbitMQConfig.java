@@ -13,20 +13,20 @@ public class RabbitMQConfig {
 
     // Exchanges
     public static final String NOTIFICATION_EXCHANGE = "notification.exchange";
-    public static final String CART_EXCHANGE = "cart.exchange";
-    public static final String ORDER_EXCHANGE = "order.exchange";
+    public static final String CART_NOTIFICATION_EXCHANGE = "cart.notification.exchange";
+    public static final String ORDER_NOTIFICATION_EXCHANGE = "order.notification.exchange";
     
     // Queues
     public static final String NOTIFICATION_QUEUE = "notification.queue";
     public static final String CART_NOTIFICATION_QUEUE = "cart.notification.queue";
     public static final String ORDER_NOTIFICATION_QUEUE = "order.notification.queue";
     public static final String CART_QUEUE = "cart.queue";
+    public static final String ORDER_QUEUE = "order.notification.queue";
     
     // Routing Keys
     public static final String NOTIFICATION_ROUTING_KEY = "notification.key";
     public static final String CART_NOTIFICATION_ROUTING_KEY = "cart.notification.key";
     public static final String ORDER_NOTIFICATION_ROUTING_KEY = "order.notification.key";
-    public static final String CART_ROUTING_KEY = "cart.key";
     
     @Bean
     public TopicExchange notificationExchange() {
@@ -34,13 +34,13 @@ public class RabbitMQConfig {
     }
     
     @Bean
-    public TopicExchange cartExchange() {
-        return new TopicExchange(CART_EXCHANGE);
+    public TopicExchange cartNotificationExchange() {
+        return new TopicExchange(CART_NOTIFICATION_EXCHANGE);
     }
     
     @Bean
-    public TopicExchange orderExchange() {
-        return new TopicExchange(ORDER_EXCHANGE);
+    public TopicExchange orderNotificationExchange() {
+        return new TopicExchange(ORDER_NOTIFICATION_EXCHANGE);
     }
     
     @Bean
@@ -64,6 +64,13 @@ public class RabbitMQConfig {
     }
     
     @Bean
+    public Queue orderQueue() {
+        return new Queue(ORDER_QUEUE);
+    }
+    
+
+    
+    @Bean
     public Binding notificationBinding() {
         return BindingBuilder
                 .bind(notificationQueue())
@@ -75,7 +82,7 @@ public class RabbitMQConfig {
     public Binding cartNotificationBinding() {
         return BindingBuilder
                 .bind(cartNotificationQueue())
-                .to(cartExchange())
+                .to(cartNotificationExchange())
                 .with(CART_NOTIFICATION_ROUTING_KEY);
     }
     
@@ -83,16 +90,8 @@ public class RabbitMQConfig {
     public Binding orderNotificationBinding() {
         return BindingBuilder
                 .bind(orderNotificationQueue())
-                .to(orderExchange())
+                .to(orderNotificationExchange())
                 .with(ORDER_NOTIFICATION_ROUTING_KEY);
-    }
-    
-    @Bean
-    public Binding cartBinding() {
-        return BindingBuilder
-                .bind(cartQueue())
-                .to(cartExchange())
-                .with(CART_ROUTING_KEY);
     }
     
     @Bean
