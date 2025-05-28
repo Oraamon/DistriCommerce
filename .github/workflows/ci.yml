@@ -116,15 +116,14 @@ jobs:
         
     - name: Build Docker Images
       run: |
-        docker-compose build
+        docker compose build
         
     - name: Run Integration Tests
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 60
-        # Aguardar serviços iniciarem
         curl -f http://localhost:8081/actuator/health || exit 1
         curl -f http://localhost:8082/actuator/health || exit 1
         curl -f http://localhost:8083/actuator/health || exit 1
         curl -f http://localhost:8086/actuator/health || exit 1
-        docker-compose down 
+        docker compose down 
