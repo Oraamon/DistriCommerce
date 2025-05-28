@@ -1,0 +1,41 @@
+name: Test Simple
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-basic:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Print environment info
+      run: |
+        echo "🚀 Testing GitHub Actions!"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Actor: ${{ github.actor }}"
+        
+    - name: List project structure
+      run: |
+        echo "📁 Project structure:"
+        ls -la
+        echo "📁 Services found:"
+        find . -name "pom.xml" -type f | head -5
+        
+    - name: Check Docker
+      run: |
+        echo "🐳 Docker version:"
+        docker --version
+        echo "🐳 Docker Compose version:"
+        docker-compose --version
+        
+    - name: Success message
+      run: |
+        echo "✅ GitHub Actions está funcionando perfeitamente!"
+        echo "✅ Todos os checks básicos passaram!" 
