@@ -21,9 +21,12 @@ public class OrderResponse {
     private OrderStatus status;
     private LocalDateTime createdAt;
     private BigDecimal totalAmount;
+    private BigDecimal shippingPrice;
     private List<OrderItemResponse> items;
     private String deliveryAddress;
+    private ShippingAddressDto shippingAddress;
     private String trackingNumber;
     private String paymentId;
     private PaymentMethod paymentMethod;
+    private PaymentInfoDto payment;
 } 

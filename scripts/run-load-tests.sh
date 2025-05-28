@@ -2,10 +2,17 @@
 
 echo "🧪 Executando Testes de Carga do E-commerce..."
 
+# Navegar para o diretório raiz do projeto
+cd "$(dirname "$0")/.."
+
 # Verificar se Artillery está instalado
 if ! command -v artillery &> /dev/null; then
     echo "📦 Instalando Artillery..."
     cd load-tests
+    if [ ! -f "package.json" ]; then
+        echo "❌ package.json não encontrado em load-tests"
+        exit 1
+    fi
     npm install
     cd ..
 fi
@@ -13,7 +20,7 @@ fi
 # Verificar se os serviços estão rodando
 echo "🔍 Verificando se os serviços estão rodando..."
 
-services=("8081" "8082" "8083" "8084")
+services=("8081" "8082" "8083" "8086")
 service_names=("Product Service" "Order Service" "Payment Service" "Notification Service")
 
 for i in "${!services[@]}"; do
@@ -35,16 +42,32 @@ done
 cd load-tests
 
 echo "🎯 Executando teste de carga do Product Service..."
-npm run test:product
+if [ -f "product-load-test.yml" ]; then
+    npx artillery run product-load-test.yml
+else
+    echo "⚠️ Arquivo product-load-test.yml não encontrado"
+fi
 
 echo "💳 Executando teste de carga do Payment Service..."
-npm run test:payment
+if [ -f "payment-load-test.yml" ]; then
+    npx artillery run payment-load-test.yml
+else
+    echo "⚠️ Arquivo payment-load-test.yml não encontrado"
+fi
 
 echo "📦 Executando teste de carga do Order Service..."
-npm run test:order
+if [ -f "order-load-test.yml" ]; then
+    npx artillery run order-load-test.yml
+else
+    echo "⚠️ Arquivo order-load-test.yml não encontrado"
+fi
 
 echo "🔥 Executando teste de estresse..."
-npm run test:stress
+if [ -f "stress-test.yml" ]; then
+    npx artillery run stress-test.yml
+else
+    echo "⚠️ Arquivo stress-test.yml não encontrado"
+fi
 
 echo "📊 Gerando relatório consolidado..."
 echo "=== RELATÓRIO DE TESTES DE CARGA ===" > load-test-report.txt

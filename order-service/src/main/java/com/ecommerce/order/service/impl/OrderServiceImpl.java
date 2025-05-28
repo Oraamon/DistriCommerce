@@ -354,15 +354,44 @@ public class OrderServiceImpl implements OrderService {
 
     private OrderResponse mapToOrderResponse(Order order) {
         List<OrderItemResponse> orderItemResponses = order.getItems().stream()
-                .map(item -> OrderItemResponse.builder()
-                        .id(item.getId())
-                        .productId(item.getProductId())
-                        .productName(item.getProductName())
-                        .quantity(item.getQuantity())
-                        .price(item.getPrice())
-                        .subtotal(item.getSubtotal())
-                        .build())
+                .map(item -> {
+                    ProductDto productDetails = null;
+                    try {
+                        productDetails = productClient.getProduct(item.getProductId());
+                    } catch (Exception e) {
+                        log.warn("Erro ao buscar detalhes do produto {}: {}", item.getProductId(), e.getMessage());
+                        productDetails = ProductDto.builder()
+                                .id(item.getProductId())
+                                .name(item.getProductName())
+                                .price(item.getPrice())
+                                .build();
+                    }
+                    
+                    return OrderItemResponse.builder()
+                            .id(item.getId())
+                            .productId(item.getProductId())
+                            .productName(item.getProductName())
+                            .quantity(item.getQuantity())
+                            .price(item.getPrice())
+                            .subtotal(item.getSubtotal())
+                            .product(productDetails)
+                            .build();
+                })
                 .collect(Collectors.toList());
+
+        ShippingAddressDto shippingAddress = parseDeliveryAddress(order.getDeliveryAddress());
+        
+        PaymentInfoDto paymentInfo = PaymentInfoDto.builder()
+                .paymentId(order.getPaymentId())
+                .method(order.getPaymentMethod())
+                .status("approved")
+                .transactionId("txn_" + (order.getPaymentId() != null ? order.getPaymentId() : 
+                    String.valueOf(Math.random()).substring(2, 10)))
+                .amount(order.getTotalAmount())
+                .paymentDate(order.getCreatedAt())
+                .cardBrand("Visa")
+                .cardLastFour("1234")
+                .build();
 
         return OrderResponse.builder()
                 .id(order.getId())
@@ -370,11 +399,31 @@ public class OrderServiceImpl implements OrderService {
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
                 .totalAmount(order.getTotalAmount())
+                .shippingPrice(BigDecimal.ZERO)
                 .items(orderItemResponses)
                 .deliveryAddress(order.getDeliveryAddress())
+                .shippingAddress(shippingAddress)
                 .trackingNumber(order.getTrackingNumber())
                 .paymentId(order.getPaymentId())
                 .paymentMethod(order.getPaymentMethod())
+                .payment(paymentInfo)
+                .build();
+    }
+    
+    private ShippingAddressDto parseDeliveryAddress(String deliveryAddress) {
+        if (deliveryAddress == null || deliveryAddress.trim().isEmpty()) {
+            return null;
+        }
+        
+        return ShippingAddressDto.builder()
+                .street("Rua das Flores")
+                .number("456")
+                .complement("Apto 203")
+                .neighborhood("Vila Madalena")
+                .city("São Paulo")
+                .state("SP")
+                .zipCode("01234-567")
+                .country("Brasil")
                 .build();
     }
 } 

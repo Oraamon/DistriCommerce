@@ -1,0 +1,58 @@
+config:
+  target: 'http://localhost:8081'
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 10
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 20
+      name: "Sustained load"
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Product Search and Retrieval"
+    weight: 60
+    flow:
+      - get:
+          url: "/api/products"
+          qs:
+            page: "{{ $randomInt(0, 10) }}"
+            size: "10"
+      - think: 1
+      - get:
+          url: "/api/products/search"
+          qs:
+            name: "{{ $pick(['smartphone', 'laptop', 'tablet', 'headphone', 'camera']) }}"
+            page: "0"
+            size: "5"
+
+  - name: "Product Details"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/products"
+          qs:
+            page: "0"
+            size: "1"
+          capture:
+            - json: "$.content[0].id"
+              as: "productId"
+      - think: 2
+      - get:
+          url: "/api/products/{{ productId }}"
+
+  - name: "Health Check"
+    weight: 10
+    flow:
+      - get:
+          url: "/actuator/health"
+      - get:
+          url: "/actuator/metrics" 

@@ -59,44 +59,39 @@ const OrderDetails = () => {
             setOrder({
               id: orderId,
               createdAt: new Date().toISOString(),
-              status: 'processing',
-              totalPrice: 456.78,
+              status: 'delivered',
+              totalPrice: 999.99,
               items: [
                 {
                   id: 1,
-                  quantity: 2,
-                  price: 99.99,
-                  product: {
-                    id: 'p1',
-                    name: 'Produto de Teste',
-                    description: 'Este é um produto de teste para desenvolvimento',
-                    imageUrl: 'https://via.placeholder.com/80'
-                  }
-                },
-                {
-                  id: 2,
                   quantity: 1,
-                  price: 256.80,
+                  price: 999.99,
+                  productId: '6833a989a656f9ce6b8a64e9',
+                  productName: 'Smartphone Premium',
                   product: {
-                    id: 'p2',
-                    name: 'Outro Produto',
-                    description: 'Descrição do outro produto de teste',
-                    imageUrl: 'https://via.placeholder.com/80'
+                    id: '6833a989a656f9ce6b8a64e9',
+                    name: 'Smartphone Premium',
+                    description: 'Smartphone de alta qualidade com tecnologia avançada',
+                    imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop',
+                    images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop']
                   }
                 }
               ],
               shippingAddress: {
-                street: 'Rua de Teste',
-                number: '123',
-                complement: 'Apto 101',
+                street: 'Rua das Flores',
+                number: '456',
+                complement: 'Apto 203',
                 city: 'São Paulo',
                 state: 'SP',
-                zipCode: '01234-567'
+                zipCode: '01234-567',
+                neighborhood: 'Vila Madalena'
               },
               payment: {
                 method: 'credit_card',
                 status: 'approved',
-                transactionId: 'txn_' + Math.random().toString(36).substring(2)
+                transactionId: 'txn_' + Math.random().toString(36).substring(2),
+                cardBrand: 'Visa',
+                cardLastFour: '1234'
               }
             });
           } else {
@@ -172,10 +167,33 @@ const OrderDetails = () => {
     switch (method) {
       case 'credit_card':
         return 'Cartão de Crédito';
+      case 'debit_card':
+        return 'Cartão de Débito';
       case 'boleto':
         return 'Boleto Bancário';
+      case 'pix':
+        return 'PIX';
+      case 'bank_transfer':
+        return 'Transferência Bancária';
       default:
         return method;
+    }
+  };
+  
+  const getPaymentStatusText = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return 'Aprovado';
+      case 'pending':
+        return 'Pendente';
+      case 'failed':
+        return 'Falhou';
+      case 'cancelled':
+        return 'Cancelado';
+      case 'refunded':
+        return 'Reembolsado';
+      default:
+        return status;
     }
   };
   
@@ -256,9 +274,19 @@ const OrderDetails = () => {
                   <Row className="align-items-center">
                     <Col md={2}>
                       <img 
-                        src={item.product?.images?.[0] || item.images?.[0] || 'https://via.placeholder.com/80'}
+                        src={
+                          item.product?.imageUrl || 
+                          item.product?.images?.[0] || 
+                          item.imageUrl ||
+                          item.images?.[0] || 
+                          'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=150&h=150&fit=crop'
+                        }
                         alt={item.productName || item.product?.name || item.name || 'Produto'}
                         className="img-fluid rounded"
+                        style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=150&h=150&fit=crop';
+                        }}
                       />
                     </Col>
                     <Col md={6}>
@@ -295,16 +323,26 @@ const OrderDetails = () => {
                   <h5 className="mb-0">Entrega</h5>
                 </Card.Header>
                 <Card.Body>
-                  {order.shippingAddress && (
-                    <address>
-                      {order.shippingAddress.street}, {order.shippingAddress.number}
-                      {order.shippingAddress.complement && 
-                        <span>, {order.shippingAddress.complement}</span>}
-                      <br />
-                      {order.shippingAddress.city} - {order.shippingAddress.state}
-                      <br />
-                      CEP: {order.shippingAddress.zipCode}
-                    </address>
+                  {order.shippingAddress ? (
+                    <div>
+                      <h6 className="mb-2">Endereço de Entrega:</h6>
+                      <address className="mb-0">
+                        {order.shippingAddress.street}, {order.shippingAddress.number}
+                        {order.shippingAddress.complement && 
+                          <span>, {order.shippingAddress.complement}</span>}
+                        <br />
+                        {order.shippingAddress.neighborhood && 
+                          <span>{order.shippingAddress.neighborhood}<br /></span>}
+                        {order.shippingAddress.city} - {order.shippingAddress.state}
+                        <br />
+                        CEP: {order.shippingAddress.zipCode}
+                      </address>
+                    </div>
+                  ) : (
+                    <div>
+                      <h6 className="mb-2">Endereço de Entrega:</h6>
+                      <p className="text-muted mb-0">Endereço não disponível</p>
+                    </div>
                   )}
                   
                   {order.tracking && (
@@ -312,6 +350,15 @@ const OrderDetails = () => {
                       <h6>Informações de Rastreio:</h6>
                       <p className="mb-0">Código: {order.tracking.code}</p>
                       <p>Transportadora: {order.tracking.carrier}</p>
+                    </div>
+                  )}
+                  
+                  {order.status === 'delivered' && (
+                    <div className="mt-3">
+                      <div className="alert alert-success mb-0">
+                        <i className="bi bi-check-circle me-2"></i>
+                        Pedido entregue com sucesso!
+                      </div>
                     </div>
                   )}
                 </Card.Body>
@@ -324,20 +371,46 @@ const OrderDetails = () => {
                   <h5 className="mb-0">Pagamento</h5>
                 </Card.Header>
                 <Card.Body>
-                  {order.payment && (
+                  {order.payment ? (
                     <>
-                      <p>
+                      <div className="mb-3">
                         <strong>Método:</strong> {getPaymentMethodText(order.payment.method)}
-                      </p>
-                      <p>
-                        <strong>Status:</strong> {order.payment.status}
-                      </p>
+                        {order.payment.method === 'credit_card' && order.payment.cardBrand && (
+                          <span className="ms-2">
+                            ({order.payment.cardBrand})
+                          </span>
+                        )}
+                      </div>
+                      
+                      {order.payment.method === 'credit_card' && order.payment.cardLastFour && (
+                        <div className="mb-3">
+                          <strong>Cartão:</strong> **** **** **** {order.payment.cardLastFour}
+                        </div>
+                      )}
+                      
+                      <div className="mb-3">
+                        <strong>Status:</strong> 
+                        <span className={`ms-2 badge ${
+                          order.payment.status === 'approved' ? 'bg-success' : 
+                          order.payment.status === 'pending' ? 'bg-warning' : 
+                          order.payment.status === 'failed' ? 'bg-danger' : 'bg-secondary'
+                        }`}>
+                          {getPaymentStatusText(order.payment.status)}
+                        </span>
+                      </div>
+                      
                       {order.payment.transactionId && (
-                        <p className="mb-0">
-                          <strong>Transação:</strong> {order.payment.transactionId}
-                        </p>
+                        <div className="mb-0">
+                          <strong>ID da Transação:</strong> 
+                          <br />
+                          <small className="text-muted font-monospace">
+                            {order.payment.transactionId}
+                          </small>
+                        </div>
                       )}
                     </>
+                  ) : (
+                    <p className="text-muted mb-0">Informações de pagamento não disponíveis</p>
                   )}
                 </Card.Body>
               </Card>
