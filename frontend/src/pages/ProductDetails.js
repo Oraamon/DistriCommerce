@@ -129,7 +129,7 @@ const ProductDetails = () => {
         <Row className="g-0">
           <Col md={4}>
             <Card.Img 
-              src={product.imageUrl || 'https://via.placeholder.com/300x400'} 
+              src={product.images[0] || 'https://via.placeholder.com/300x400'} 
               alt={product.name} 
               className="img-fluid rounded-start"
             />

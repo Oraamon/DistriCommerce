@@ -202,6 +202,12 @@ public class NotificationServiceImpl implements NotificationService {
                 return "Seu pedido foi entregue";
             case "order_cancelled":
                 return "Seu pedido foi cancelado";
+            case "ORDER_SHIPPED":
+                return "Seu pedido saiu para entrega! Acompanhe o rastreamento";
+            case "ORDER_DELIVERED":
+                return "Seu pedido foi entregue com sucesso! Obrigado por comprar conosco";
+            case "TRACKING_ADDED":
+                return "Código de rastreamento disponível para acompanhar sua entrega";
             default:
                 return "O status do seu pedido foi atualizado";
         }

@@ -101,25 +101,69 @@ public class NotificationListener {
             log.info("Recebido evento de pedido: {}", orderEventJson);
             
             JsonNode orderEvent = objectMapper.readTree(orderEventJson);
-            String action = orderEvent.get("action").asText();
-            Long userId = orderEvent.get("userId").asLong();
-            String message = orderEvent.get("message").asText();
             
-            String title = getOrderNotificationTitle(action);
-            
-            NotificationRequest request = NotificationRequest.builder()
-                    .userId(userId)
-                    .type(NotificationType.ORDER_STATUS)
-                    .title(title)
-                    .message(message)
-                    .data(orderEventJson)
-                    .build();
-            
-            notificationService.createNotification(request);
-            log.info("Notificação de pedido criada para usuário: {} - ação: {}", userId, action);
+            // Verificar se é o formato antigo (com action) ou novo (com eventType)
+            if (orderEvent.has("eventType")) {
+                // Novo formato para notificações de entrega
+                String eventType = orderEvent.get("eventType").asText();
+                Long userId = orderEvent.get("userId").asLong();
+                String title = orderEvent.get("title").asText();
+                String message = orderEvent.get("message").asText();
+                
+                // Determinar o tipo de notificação baseado no eventType
+                NotificationType type = getNotificationTypeFromEventType(eventType);
+                
+                NotificationRequest request = NotificationRequest.builder()
+                        .userId(userId)
+                        .type(type)
+                        .title(title)
+                        .message(message)
+                        .data(orderEventJson)
+                        .build();
+                
+                notificationService.createNotification(request);
+                log.info("Notificação de entrega criada para usuário: {} - evento: {}", userId, eventType);
+                
+            } else if (orderEvent.has("action")) {
+                // Formato antigo para compatibilidade
+                String action = orderEvent.get("action").asText();
+                Long userId = orderEvent.get("userId").asLong();
+                String message = orderEvent.get("message").asText();
+                
+                String title = getOrderNotificationTitle(action);
+                
+                NotificationRequest request = NotificationRequest.builder()
+                        .userId(userId)
+                        .type(NotificationType.ORDER_STATUS)
+                        .title(title)
+                        .message(message)
+                        .data(orderEventJson)
+                        .build();
+                
+                notificationService.createNotification(request);
+                log.info("Notificação de pedido criada para usuário: {} - ação: {}", userId, action);
+            } else {
+                log.warn("Formato de evento de pedido não reconhecido: {}", orderEventJson);
+            }
             
         } catch (Exception e) {
             log.error("Erro ao processar evento de pedido: {}", e.getMessage());
+        }
+    }
+    
+    private NotificationType getNotificationTypeFromEventType(String eventType) {
+        switch (eventType) {
+            case "ORDER_SHIPPED":
+            case "ORDER_DELIVERED":
+            case "TRACKING_ADDED":
+                return NotificationType.ORDER_STATUS;
+            case "ORDER_CONFIRMED":
+            case "ORDER_PROCESSING":
+            case "ORDER_CANCELLED":
+            case "ORDER_RETURNED":
+                return NotificationType.ORDER_STATUS;
+            default:
+                return NotificationType.ORDER_STATUS;
         }
     }
 
@@ -192,6 +236,12 @@ public class NotificationListener {
                 return "Pagamento Aprovado";
             case "payment_failed":
                 return "Pagamento Rejeitado";
+            case "ORDER_SHIPPED":
+                return "Pedido Enviado para Entrega";
+            case "ORDER_DELIVERED":
+                return "Pedido Entregue";
+            case "TRACKING_ADDED":
+                return "Código de Rastreamento";
             default:
                 return "Atualização do Pedido";
         }

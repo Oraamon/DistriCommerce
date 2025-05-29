@@ -253,19 +253,23 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponse updateOrderStatus(Long id, OrderStatus status) {
+        log.info("=== INICIO updateOrderStatus - id: {}, status: {} ===", id, status);
+        
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado com id: " + id));
         
         OrderStatus oldStatus = order.getStatus();
+        log.info("Status anterior: {}, novo status: {}", oldStatus, status);
+        
         order.setStatus(status);
         
         Order updatedOrder = orderRepository.save(order);
+        log.info("Pedido salvo com sucesso");
         
-        // Enviar notificação sobre a mudança de status
         try {
             String eventType = getEventTypeForStatus(status);
+            log.info("EventType gerado: {}", eventType);
             
-            // Criar objeto para enviar via RabbitMQ
             Map<String, Object> orderStatusEvent = new HashMap<>();
             orderStatusEvent.put("eventType", eventType);
             orderStatusEvent.put("orderId", updatedOrder.getId());
@@ -274,23 +278,34 @@ public class OrderServiceImpl implements OrderService {
             orderStatusEvent.put("newStatus", status.name());
             orderStatusEvent.put("timestamp", LocalDateTime.now().toString());
             
-            // Converter para JSON
             String orderStatusJson = objectMapper.writeValueAsString(orderStatusEvent);
+            log.info("JSON gerado: {}", orderStatusJson);
             
-            // Enviar para a fila de notificações
+            log.info("Enviando mensagem para exchange: {}, routing key: {}", ORDER_NOTIFICATION_EXCHANGE, ORDER_NOTIFICATION_ROUTING_KEY);
+            
             rabbitTemplate.convertAndSend(
-                NOTIFICATION_EXCHANGE, 
+                ORDER_NOTIFICATION_EXCHANGE, 
                 ORDER_NOTIFICATION_ROUTING_KEY, 
                 orderStatusJson
             );
             
             log.info("Notificação de alteração de status enviada para o pedido: {}, de {} para {}", 
                 updatedOrder.getId(), oldStatus, status);
+            
+            // Verificação para entrega
+            boolean isDeliveryUpdate = isDeliveryStatusUpdate(status);
+            log.info("É atualização de entrega? {}", isDeliveryUpdate);
+                
+            if (isDeliveryUpdate) {
+                log.info("Enviando notificação de entrega...");
+                sendDeliveryNotification(updatedOrder, eventType);
+            }
+            
         } catch (Exception e) {
-            log.error("Erro ao enviar notificação de alteração de status: {}", e.getMessage());
-            // Não interrompe o fluxo em caso de erro no envio da notificação
+            log.error("Erro ao enviar notificação de alteração de status: {}", e.getMessage(), e);
         }
         
+        log.info("=== FIM updateOrderStatus ===");
         return mapToOrderResponse(updatedOrder);
     }
     
@@ -312,6 +327,82 @@ public class OrderServiceImpl implements OrderService {
                 return "ORDER_STATUS_UPDATED";
         }
     }
+    
+    private boolean isDeliveryStatusUpdate(OrderStatus status) {
+        return status == OrderStatus.SHIPPED || 
+               status == OrderStatus.DELIVERED;
+    }
+    
+    private void sendDeliveryNotification(Order order, String eventType) {
+        try {
+            log.info("=== INICIO sendDeliveryNotification - eventType: {}, orderId: {}, userId: {} ===", 
+                    eventType, order.getId(), order.getUserId());
+            
+            String title = getDeliveryNotificationTitle(eventType);
+            String message = getDeliveryNotificationMessage(eventType, order);
+            
+            log.info("Título: {}", title);
+            log.info("Mensagem: {}", message);
+            
+            Map<String, Object> deliveryNotification = new HashMap<>();
+            deliveryNotification.put("userId", Long.valueOf(order.getUserId()));
+            deliveryNotification.put("orderId", order.getId());
+            deliveryNotification.put("eventType", eventType);
+            deliveryNotification.put("title", title);
+            deliveryNotification.put("message", message);
+            deliveryNotification.put("status", order.getStatus().name());
+            deliveryNotification.put("trackingNumber", order.getTrackingNumber());
+            deliveryNotification.put("timestamp", LocalDateTime.now().toString());
+            
+            String deliveryNotificationJson = objectMapper.writeValueAsString(deliveryNotification);
+            log.info("JSON de entrega gerado: {}", deliveryNotificationJson);
+            
+            log.info("Enviando notificação de entrega para exchange: {}, routing key: {}", 
+                    ORDER_NOTIFICATION_EXCHANGE, ORDER_NOTIFICATION_ROUTING_KEY);
+            
+            rabbitTemplate.convertAndSend(
+                ORDER_NOTIFICATION_EXCHANGE,
+                ORDER_NOTIFICATION_ROUTING_KEY,
+                deliveryNotificationJson
+            );
+            
+            log.info("Notificação de entrega enviada para usuário {}: {} - pedido: {}", 
+                    order.getUserId(), eventType, order.getId());
+            log.info("=== FIM sendDeliveryNotification ===");
+                    
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de entrega: {}", e.getMessage(), e);
+        }
+    }
+    
+    private String getDeliveryNotificationTitle(String eventType) {
+        switch (eventType) {
+            case "ORDER_SHIPPED":
+                return "Pedido Enviado";
+            case "ORDER_DELIVERED":
+                return "Pedido Entregue";
+            default:
+                return "Atualização de Entrega";
+        }
+    }
+    
+    private String getDeliveryNotificationMessage(String eventType, Order order) {
+        switch (eventType) {
+            case "ORDER_SHIPPED":
+                if (order.getTrackingNumber() != null && !order.getTrackingNumber().isEmpty()) {
+                    return String.format("Seu pedido #%d foi enviado! Código de rastreamento: %s. Acompanhe a entrega.", 
+                            order.getId(), order.getTrackingNumber());
+                } else {
+                    return String.format("Seu pedido #%d foi enviado para entrega! Em breve você receberá o código de rastreamento.", 
+                            order.getId());
+                }
+            case "ORDER_DELIVERED":
+                return String.format("Seu pedido #%d foi entregue com sucesso! Obrigado por comprar conosco. Esperamos que goste do seu produto!", 
+                        order.getId());
+            default:
+                return String.format("Status de entrega do seu pedido #%d foi atualizado.", order.getId());
+        }
+    }
 
     @Override
     @Transactional
@@ -323,6 +414,36 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.SHIPPED);
         
         Order updatedOrder = orderRepository.save(order);
+        
+        try {
+            String title = "Código de Rastreamento Disponível";
+            String message = String.format("Seu pedido #%d agora tem código de rastreamento: %s. Acompanhe sua entrega!", 
+                    order.getId(), trackingNumber);
+            
+            Map<String, Object> trackingNotification = new HashMap<>();
+            trackingNotification.put("userId", Long.valueOf(order.getUserId()));
+            trackingNotification.put("orderId", order.getId());
+            trackingNotification.put("eventType", "TRACKING_ADDED");
+            trackingNotification.put("title", title);
+            trackingNotification.put("message", message);
+            trackingNotification.put("trackingNumber", trackingNumber);
+            trackingNotification.put("timestamp", LocalDateTime.now().toString());
+            
+            String trackingNotificationJson = objectMapper.writeValueAsString(trackingNotification);
+            
+            rabbitTemplate.convertAndSend(
+                ORDER_NOTIFICATION_EXCHANGE,
+                ORDER_NOTIFICATION_ROUTING_KEY,
+                trackingNotificationJson
+            );
+            
+            log.info("Notificação de código de rastreamento enviada para usuário {}: {} - pedido: {}", 
+                    order.getUserId(), trackingNumber, order.getId());
+                    
+        } catch (Exception e) {
+            log.error("Erro ao enviar notificação de código de rastreamento: {}", e.getMessage());
+        }
+        
         return mapToOrderResponse(updatedOrder);
     }
 
@@ -341,8 +462,8 @@ public class OrderServiceImpl implements OrderService {
             notification.put("timestamp", LocalDateTime.now().toString());
 
             rabbitTemplate.convertAndSend(
-                "order.notification.exchange",
-                "order.notification.key",
+                ORDER_NOTIFICATION_EXCHANGE,
+                ORDER_NOTIFICATION_ROUTING_KEY,
                 notification
             );
 
