@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Card, Col, Container, Form, ListGroup, Row } from 'react-bootstrap';
+import { Button, Card, Col, Container, Form, ListGroup, Row, Alert, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CartService from '../services/CartService';
 import AuthService from '../services/AuthService';
 import PaymentService from '../services/PaymentService';
+import AddressService from '../services/AddressService';
+import CreditCardForm from '../components/CreditCardForm';
 
 const Checkout = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -17,10 +19,15 @@ const Checkout = () => {
     street: '',
     number: '',
     complement: '',
+    neighborhood: '',
     city: '',
     state: '',
     zipCode: '',
   });
+  
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState('');
+  const [cepSuccess, setCepSuccess] = useState('');
   
   const [paymentMethod, setPaymentMethod] = useState('credit_card');
   const [cardInfo, setCardInfo] = useState({
@@ -29,6 +36,75 @@ const Checkout = () => {
     expiryDate: '',
     cvv: '',
   });
+
+  const [showTestCards, setShowTestCards] = useState(false);
+  
+  const testCards = [
+    {
+      bankName: 'Visa Internacional',
+      number: '4111 1111 1111 1111',
+      name: 'TESTE VISA',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'visa'
+    },
+    {
+      bankName: 'Mastercard Internacional',
+      number: '5555 5555 5555 4444',
+      name: 'TESTE MASTERCARD',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'mastercard'
+    },
+    {
+      bankName: 'American Express',
+      number: '3782 8224 6310 005',
+      name: 'TESTE AMEX',
+      expiry: '12/28',
+      cvv: '1234',
+      brand: 'amex'
+    },
+    {
+      bankName: 'Nubank Roxinho',
+      number: '5067 1234 5678 9012',
+      name: 'TESTE NUBANK',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'nubank'
+    },
+    {
+      bankName: 'C6 Bank Amarelo',
+      number: '6277 8012 3456 7890',
+      name: 'TESTE C6 BANK',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'c6bank'
+    },
+    {
+      bankName: 'Bradesco Vermelho',
+      number: '5078 1234 5678 9012',
+      name: 'TESTE BRADESCO',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'bradesco'
+    },
+    {
+      bankName: 'Santander Vermelho',
+      number: '4389 1234 5678 9012',
+      name: 'TESTE SANTANDER',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'santander'
+    },
+    {
+      bankName: 'Itaú Laranja',
+      number: '6062 8212 3456 7890',
+      name: 'TESTE ITAU',
+      expiry: '12/28',
+      cvv: '123',
+      brand: 'itau'
+    }
+  ];
   
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -71,6 +147,46 @@ const Checkout = () => {
     });
   };
   
+  const handleCEPChange = async (e) => {
+    const cep = e.target.value;
+    const formattedCep = AddressService.formatCEP(cep);
+    
+    setShippingAddress({
+      ...shippingAddress,
+      zipCode: formattedCep
+    });
+    
+    setCepError('');
+    setCepSuccess('');
+    
+    if (AddressService.validateCEP(formattedCep)) {
+      setCepLoading(true);
+      
+      try {
+        const addressData = await AddressService.getAddressByCEP(formattedCep);
+        
+        setShippingAddress(prev => ({
+          ...prev,
+          street: addressData.street,
+          neighborhood: addressData.neighborhood,
+          city: addressData.city,
+          state: addressData.state,
+          complement: prev.complement || addressData.complement
+        }));
+        
+        setCepSuccess('Endereço encontrado e preenchido automaticamente!');
+        
+        setTimeout(() => setCepSuccess(''), 3000);
+        
+      } catch (error) {
+        setCepError(error.message);
+        setTimeout(() => setCepError(''), 5000);
+      } finally {
+        setCepLoading(false);
+      }
+    }
+  };
+  
   const handleCardInfoChange = (e) => {
     const { name, value } = e.target;
     setCardInfo({
@@ -84,7 +200,7 @@ const Checkout = () => {
   };
   
   const calculateShipping = () => {
-    return 15.00; // Valor fixo para exemplo
+    return 15.00;
   };
   
   const calculateTotal = () => {
@@ -102,13 +218,10 @@ const Checkout = () => {
       let orderId;
       
       if (isDemo) {
-        // Em modo de demonstração, criamos um pedido local
         console.log('Processando pedido em modo de demonstração');
         
-        // Gerar um ID de pedido simulado
         orderId = 'order_' + Date.now();
         
-        // Salvar o pedido no localStorage para persistência
         const existingOrders = JSON.parse(localStorage.getItem('demo_orders') || '[]');
         
         const newOrder = {
@@ -135,14 +248,11 @@ const Checkout = () => {
         existingOrders.push(newOrder);
         localStorage.setItem('demo_orders', JSON.stringify(existingOrders));
         
-        // Limpar o carrinho em modo demo
         CartService.clearCart();
         
-        // Atualizar o header com a nova contagem do carrinho
         const event = new CustomEvent('cart-updated');
         window.dispatchEvent(event);
         
-        // Em modo demo, atualizar estoque diretamente
         try {
           console.log('Atualizando estoque em modo demo...');
           await PaymentService.updateProductStock(cartItems, 'decrease');
@@ -151,11 +261,11 @@ const Checkout = () => {
           console.error('Erro ao atualizar estoque em modo demo:', stockErr);
         }
       } else {
-        // Fluxo normal com API
-        // Cria uma ordem no serviço de pedidos
+        const fullAddress = `${shippingAddress.street}, ${shippingAddress.number}${shippingAddress.complement ? ', ' + shippingAddress.complement : ''}, ${shippingAddress.neighborhood}, ${shippingAddress.city} - ${shippingAddress.state}, ${shippingAddress.zipCode}`;
+        
         const orderResponse = await axios.post('/api/orders', {
           userId: AuthService.getCurrentUser()?.id || "anonymous",
-          deliveryAddress: `${shippingAddress.street}, ${shippingAddress.number}, ${shippingAddress.complement}, ${shippingAddress.city} - ${shippingAddress.state}, ${shippingAddress.zipCode}`,
+          deliveryAddress: fullAddress,
           items: cartItems.map(item => ({
             productId: item.productId || item.id,
             quantity: item.quantity
@@ -170,17 +280,13 @@ const Checkout = () => {
         orderId = orderResponse.data.id;
         console.log('Pedido criado com sucesso:', orderResponse.data);
         
-        // Limpar o carrinho após criar o pedido
         await CartService.clearCart();
         
-        // Atualizar o header com a nova contagem do carrinho
         const event = new CustomEvent('cart-updated');
         window.dispatchEvent(event);
       }
       
-      // Sempre enviar para o RabbitMQ, mesmo em modo demo
       try {
-        // Preparar o objeto de pagamento
         const paymentRequest = {
           orderId: orderId,
           userId: AuthService.getCurrentUser()?.id || "anonymous",
@@ -192,7 +298,6 @@ const Checkout = () => {
             expiryDate: cardInfo.expiryDate,
             cvv: cardInfo.cvv
           } : null,
-          // Incluir os itens para permitir que o serviço de pagamento atualize o estoque
           orderItems: cartItems.map(item => ({
             productId: item.productId || item.id,
             quantity: item.quantity,
@@ -202,16 +307,13 @@ const Checkout = () => {
         
         console.log('Enviando solicitação de pagamento:', paymentRequest);
         
-        // Enviar para o serviço de pagamento através do gateway
         const paymentResponse = await PaymentService.processPayment(paymentRequest);
         
         console.log('Resposta do processamento de pagamento:', paymentResponse);
       } catch (paymentErr) {
         console.error('Erro ao solicitar processamento de pagamento:', paymentErr);
-        // Não vamos tratar como erro fatal, apenas registrar
       }
       
-      // Redirecionar para página de sucesso
       navigate(`/orders/${orderId}/success`);
     } catch (err) {
       console.error('Erro ao processar pedido:', err);
@@ -233,6 +335,41 @@ const Checkout = () => {
             <Card className="mb-4">
               <Card.Body>
                 <Card.Title>Endereço de Entrega</Card.Title>
+                
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>CEP</Form.Label>
+                      <div className="position-relative">
+                        <Form.Control 
+                          type="text" 
+                          name="zipCode" 
+                          value={shippingAddress.zipCode} 
+                          onChange={handleCEPChange}
+                          placeholder="00000-000"
+                          maxLength="9"
+                          required
+                        />
+                        {cepLoading && (
+                          <div className="position-absolute" style={{ top: '50%', right: '10px', transform: 'translateY(-50%)' }}>
+                            <Spinner animation="border" size="sm" />
+                          </div>
+                        )}
+                      </div>
+                      {cepError && (
+                        <div className="text-danger mt-1" style={{ fontSize: '0.875em' }}>
+                          {cepError}
+                        </div>
+                      )}
+                      {cepSuccess && (
+                        <div className="text-success mt-1" style={{ fontSize: '0.875em' }}>
+                          ✓ {cepSuccess}
+                        </div>
+                      )}
+                    </Form.Group>
+                  </Col>
+                </Row>
+                
                 <Row>
                   <Col md={8}>
                     <Form.Group className="mb-3">
@@ -260,18 +397,35 @@ const Checkout = () => {
                   </Col>
                 </Row>
                 
-                <Form.Group className="mb-3">
-                  <Form.Label>Complemento</Form.Label>
-                  <Form.Control 
-                    type="text" 
-                    name="complement" 
-                    value={shippingAddress.complement} 
-                    onChange={handleShippingChange}
-                  />
-                </Form.Group>
-                
                 <Row>
                   <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Complemento</Form.Label>
+                      <Form.Control 
+                        type="text" 
+                        name="complement" 
+                        value={shippingAddress.complement} 
+                        onChange={handleShippingChange}
+                        placeholder="Apartamento, bloco, etc."
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Bairro</Form.Label>
+                      <Form.Control 
+                        type="text" 
+                        name="neighborhood" 
+                        value={shippingAddress.neighborhood} 
+                        onChange={handleShippingChange}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                
+                <Row>
+                  <Col md={8}>
                     <Form.Group className="mb-3">
                       <Form.Label>Cidade</Form.Label>
                       <Form.Control 
@@ -283,7 +437,7 @@ const Checkout = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  <Col md={4}>
                     <Form.Group className="mb-3">
                       <Form.Label>Estado</Form.Label>
                       <Form.Control 
@@ -291,18 +445,8 @@ const Checkout = () => {
                         name="state" 
                         value={shippingAddress.state} 
                         onChange={handleShippingChange}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={3}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>CEP</Form.Label>
-                      <Form.Control 
-                        type="text" 
-                        name="zipCode" 
-                        value={shippingAddress.zipCode} 
-                        onChange={handleShippingChange}
+                        maxLength="2"
+                        style={{ textTransform: 'uppercase' }}
                         required
                       />
                     </Form.Group>
@@ -315,7 +459,7 @@ const Checkout = () => {
               <Card.Body>
                 <Card.Title>Método de Pagamento</Card.Title>
                 
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-4">
                   <Form.Check
                     type="radio"
                     id="credit-card"
@@ -338,63 +482,20 @@ const Checkout = () => {
                 
                 {paymentMethod === 'credit_card' && (
                   <div>
-                    <Row>
-                      <Col md={12}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>Número do Cartão</Form.Label>
-                          <Form.Control 
-                            type="text" 
-                            name="cardNumber" 
-                            value={cardInfo.cardNumber} 
-                            onChange={handleCardInfoChange}
-                            required={paymentMethod === 'credit_card'}
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
+                    <Alert variant="info" className="mb-4">
+                      <small>
+                        <strong>💳 Teste com cartões reais:</strong> Use os cartões de teste fornecidos abaixo para simular diferentes bandeiras e bancos.
+                      </small>
+                    </Alert>
                     
-                    <Row>
-                      <Col md={12}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>Nome no Cartão</Form.Label>
-                          <Form.Control 
-                            type="text" 
-                            name="cardName" 
-                            value={cardInfo.cardName} 
-                            onChange={handleCardInfoChange}
-                            required={paymentMethod === 'credit_card'}
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
-                    
-                    <Row>
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>Data de Validade</Form.Label>
-                          <Form.Control 
-                            type="text" 
-                            name="expiryDate" 
-                            placeholder="MM/AA"
-                            value={cardInfo.expiryDate} 
-                            onChange={handleCardInfoChange}
-                            required={paymentMethod === 'credit_card'}
-                          />
-                        </Form.Group>
-                      </Col>
-                      <Col md={6}>
-                        <Form.Group className="mb-3">
-                          <Form.Label>CVV</Form.Label>
-                          <Form.Control 
-                            type="text" 
-                            name="cvv" 
-                            value={cardInfo.cvv} 
-                            onChange={handleCardInfoChange}
-                            required={paymentMethod === 'credit_card'}
-                          />
-                        </Form.Group>
-                      </Col>
-                    </Row>
+                    <CreditCardForm 
+                      cardInfo={cardInfo}
+                      handleCardInfoChange={handleCardInfoChange}
+                      testCards={testCards}
+                      setTestCards={() => {}}
+                      showTestCards={showTestCards}
+                      setShowTestCards={setShowTestCards}
+                    />
                   </div>
                 )}
               </Card.Body>

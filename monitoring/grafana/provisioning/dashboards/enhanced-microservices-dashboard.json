@@ -1,0 +1,296 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Enhanced Microservices Monitoring",
+    "tags": ["microservices", "spring-boot", "ecommerce"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "5s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Services Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "color": "red",
+                    "text": "DOWN"
+                  },
+                  "1": {
+                    "color": "green",
+                    "text": "UP"
+                  }
+                },
+                "type": "value"
+              }
+            ],
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Requests Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (application)",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "requests/sec",
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 6
+        }
+      },
+      {
+        "id": 3,
+        "title": "Response Time Percentiles",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, application))",
+            "legendFormat": "95th - {{application}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, application))",
+            "legendFormat": "50th - {{application}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "seconds",
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 6
+        }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..|5..\"}[5m])) by (application) / sum(rate(http_server_requests_seconds_count[5m])) by (application)",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "error rate",
+            "max": 1,
+            "min": 0,
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 14
+        }
+      },
+      {
+        "id": 5,
+        "title": "JVM Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_memory_used_bytes{area=\"heap\"} / jvm_memory_max_bytes{area=\"heap\"}",
+            "legendFormat": "Heap - {{application}}"
+          },
+          {
+            "expr": "jvm_memory_used_bytes{area=\"nonheap\"} / jvm_memory_max_bytes{area=\"nonheap\"}",
+            "legendFormat": "Non-Heap - {{application}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "percentage",
+            "max": 1,
+            "min": 0,
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 14
+        }
+      },
+      {
+        "id": 6,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "hikaricp_connections_active",
+            "legendFormat": "Active - {{application}}"
+          },
+          {
+            "expr": "hikaricp_connections_idle",
+            "legendFormat": "Idle - {{application}}"
+          },
+          {
+            "expr": "hikaricp_connections_max",
+            "legendFormat": "Max - {{application}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 22
+        }
+      },
+      {
+        "id": 7,
+        "title": "RabbitMQ Queue Messages",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rabbitmq_queue_messages",
+            "legendFormat": "{{queue}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 22
+        }
+      },
+      {
+        "id": 8,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_cpu_usage",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "percentage",
+            "max": 1,
+            "min": 0,
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 30
+        }
+      },
+      {
+        "id": 9,
+        "title": "Garbage Collection Time",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(jvm_gc_pause_seconds_sum[5m])",
+            "legendFormat": "{{application}} - {{gc}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "seconds/sec",
+            "show": true
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 30
+        }
+      },
+      {
+        "id": 10,
+        "title": "Thread Count",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "jvm_threads_live_threads",
+            "legendFormat": "Live - {{application}}"
+          },
+          {
+            "expr": "jvm_threads_daemon_threads",
+            "legendFormat": "Daemon - {{application}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 38
+        }
+      },
+      {
+        "id": 11,
+        "title": "System Load Average",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "system_load_average_1m",
+            "legendFormat": "{{application}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 38
+        }
+      }
+    ]
+  }
+} 
