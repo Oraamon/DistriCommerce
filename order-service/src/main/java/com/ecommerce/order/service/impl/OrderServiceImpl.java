@@ -536,14 +536,119 @@ public class OrderServiceImpl implements OrderService {
             return null;
         }
         
+        try {
+            // Formato esperado: "Rua, Número, Complemento, Bairro, Cidade - Estado, CEP"
+            // ou: "Rua, Número, Bairro, Cidade - Estado, CEP" (sem complemento)
+            
+            String[] parts = deliveryAddress.split(",");
+            
+            if (parts.length < 4) {
+                log.warn("Formato de endereço inválido, usando valores padrão: {}", deliveryAddress);
+                return createDefaultShippingAddress();
+            }
+            
+            String street = parts[0].trim();
+            String number = parts[1].trim();
+            
+            String complement = "";
+            String neighborhood = "";
+            String cityStateZip = "";
+            
+            if (parts.length == 5) {
+                // Com complemento: Rua, Número, Complemento, Bairro, Cidade - Estado, CEP
+                complement = parts[2].trim();
+                neighborhood = parts[3].trim();
+                cityStateZip = parts[4].trim();
+            } else if (parts.length == 4) {
+                // Sem complemento: Rua, Número, Bairro, Cidade - Estado, CEP
+                neighborhood = parts[2].trim();
+                cityStateZip = parts[3].trim();
+            } else {
+                // Formato com mais partes, tentar extrair
+                complement = parts[2].trim();
+                neighborhood = parts[3].trim();
+                // Juntar o resto como cityStateZip
+                StringBuilder sb = new StringBuilder();
+                for (int i = 4; i < parts.length; i++) {
+                    if (i > 4) sb.append(",");
+                    sb.append(parts[i]);
+                }
+                cityStateZip = sb.toString().trim();
+            }
+            
+            // Extrair cidade, estado e CEP de "Cidade - Estado, CEP"
+            String city = "";
+            String state = "";
+            String zipCode = "";
+            
+            if (cityStateZip.contains(" - ")) {
+                String[] cityStateParts = cityStateZip.split(" - ");
+                city = cityStateParts[0].trim();
+                
+                if (cityStateParts.length > 1) {
+                    String stateZip = cityStateParts[1].trim();
+                    if (stateZip.contains(",")) {
+                        String[] stateZipParts = stateZip.split(",");
+                        state = stateZipParts[0].trim();
+                        if (stateZipParts.length > 1) {
+                            zipCode = stateZipParts[1].trim();
+                        }
+                    } else {
+                        state = stateZip;
+                    }
+                }
+            } else {
+                // Formato alternativo, tentar extrair CEP do final
+                if (cityStateZip.matches(".*\\d{5}-?\\d{3}.*")) {
+                    // Tem CEP
+                    String[] lastCommaParts = cityStateZip.split(",");
+                    if (lastCommaParts.length >= 2) {
+                        zipCode = lastCommaParts[lastCommaParts.length - 1].trim();
+                        String remaining = cityStateZip.substring(0, cityStateZip.lastIndexOf(",")).trim();
+                        if (remaining.contains(" - ")) {
+                            String[] cityStateParts = remaining.split(" - ");
+                            city = cityStateParts[0].trim();
+                            if (cityStateParts.length > 1) {
+                                state = cityStateParts[1].trim();
+                            }
+                        } else {
+                            city = remaining;
+                        }
+                    }
+                } else {
+                    city = cityStateZip;
+                }
+            }
+            
+            log.info("Endereço parseado - Rua: {}, Número: {}, Complemento: {}, Bairro: {}, Cidade: {}, Estado: {}, CEP: {}", 
+                    street, number, complement, neighborhood, city, state, zipCode);
+            
+            return ShippingAddressDto.builder()
+                    .street(street.isEmpty() ? "Não informado" : street)
+                    .number(number.isEmpty() ? "S/N" : number)
+                    .complement(complement.isEmpty() ? null : complement)
+                    .neighborhood(neighborhood.isEmpty() ? "Não informado" : neighborhood)
+                    .city(city.isEmpty() ? "Não informado" : city)
+                    .state(state.isEmpty() ? "BR" : state)
+                    .zipCode(zipCode.isEmpty() ? "00000-000" : zipCode)
+                    .country("Brasil")
+                    .build();
+                    
+        } catch (Exception e) {
+            log.error("Erro ao fazer parsing do endereço '{}': {}", deliveryAddress, e.getMessage());
+            return createDefaultShippingAddress();
+        }
+    }
+    
+    private ShippingAddressDto createDefaultShippingAddress() {
         return ShippingAddressDto.builder()
-                .street("Rua das Flores")
-                .number("456")
-                .complement("Apto 203")
-                .neighborhood("Vila Madalena")
-                .city("São Paulo")
-                .state("SP")
-                .zipCode("01234-567")
+                .street("Endereço não disponível")
+                .number("S/N")
+                .complement(null)
+                .neighborhood("Não informado")
+                .city("Não informado")
+                .state("BR")
+                .zipCode("00000-000")
                 .country("Brasil")
                 .build();
     }

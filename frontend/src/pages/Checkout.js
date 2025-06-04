@@ -236,7 +236,16 @@ const Checkout = () => {
             price: item.price,
             quantity: item.quantity
           })),
-          shippingAddress,
+          shippingAddress: {
+            street: shippingAddress.street,
+            number: shippingAddress.number,
+            complement: shippingAddress.complement,
+            neighborhood: shippingAddress.neighborhood,
+            city: shippingAddress.city,
+            state: shippingAddress.state,
+            zipCode: shippingAddress.zipCode
+          },
+          deliveryAddress: `${shippingAddress.street}, ${shippingAddress.number}${shippingAddress.complement ? ', ' + shippingAddress.complement : ''}, ${shippingAddress.neighborhood}, ${shippingAddress.city} - ${shippingAddress.state}, ${shippingAddress.zipCode}`,
           shippingPrice: calculateShipping(),
           payment: {
             method: paymentMethod,
